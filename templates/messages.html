@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Messages – TFE Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Source Sans 3', system-ui, sans-serif; background: #faf6eb; color: #3d3429; }
+    h1, h2 { font-family: 'Libre Baskerville', Georgia, serif; }
+    .pm-mine { margin-left: auto; background: #5c4a32; color: #faf6eb; }
+    .pm-other { background: #fffdf7; border: 1px solid #e0d4bc; color: #3d3429; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="sticky top-0 z-50 border-b" style="background:#fffdf7;border-color:#e0d4bc;">
+    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-semibold" style="color:#3d3429;">
+        <span class="w-7 h-7 rounded text-xs flex items-center justify-center font-bold" style="background:#5c4a32;color:#faf6eb;">TH</span>
+        TFE Hub
+      </a>
+      <nav class="flex gap-2 text-sm">
+        <a href="/" style="color:#6b5e4f;">Projets</a>
+        <a href="/amis" style="color:#6b5e4f;">Amis</a>
+        <a href="/messages" class="font-semibold" style="color:#3d3429;">Messages</a>
+        <a href="/logout" style="color:#6b5e4f;">Déconnexion</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="max-w-5xl mx-auto px-4 py-6 grid md:grid-cols-3 gap-4" style="min-height:70vh;">
+    <aside class="rounded-lg border p-3 md:col-span-1" style="background:#fffdf7;border-color:#e0d4bc;">
+      <h2 class="text-sm font-semibold mb-3" style="color:#3d3429;">Conversations</h2>
+      {% if friends %}
+      <ul class="space-y-1">
+        {% for f in friends %}
+        <li>
+          <a href="/messages/{{ f.id }}"
+            class="block px-3 py-2 rounded text-sm {% if peer and peer.id == f.id %}font-semibold{% endif %}"
+            style="{% if peer and peer.id == f.id %}background:#f3ead6;{% endif %}color:#3d3429;">
+            {{ f.username }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-xs" style="color:#8a7b68;">Ajoute des amis pour discuter.
+        <a href="/amis" class="underline">Voir les amis</a>
+      </p>
+      {% endif %}
+    </aside>
+
+    <section class="md:col-span-2 rounded-lg border flex flex-col" style="background:#fffdf7;border-color:#e0d4bc;min-height:420px;">
+      {% if peer %}
+      <div class="px-4 py-3 border-b flex items-center justify-between" style="border-color:#e0d4bc;background:#f3ead6;">
+        <span class="font-semibold" style="color:#3d3429;">{{ peer.username }}</span>
+        <div class="flex gap-2">
+          <button id="btn-call" class="btn-primary px-3 py-1 text-xs">📞 Appeler</button>
+          <button id="btn-hangup" class="px-3 py-1 text-xs rounded border hidden" style="border-color:#e0d4bc;">Raccrocher</button>
+        </div>
+      </div>
+
+      <div id="call-box" class="hidden p-3 border-b" style="border-color:#e0d4bc;background:#faf6eb;">
+        <div class="grid grid-cols-2 gap-2">
+          <video id="local-video" autoplay muted playsinline class="w-full rounded bg-black" style="max-height:160px;"></video>
+          <video id="remote-video" autoplay playsinline class="w-full rounded bg-black" style="max-height:160px;"></video>
+        </div>
+        <p id="call-status" class="text-xs mt-2" style="color:#8a7b68;">Connexion…</p>
+      </div>
+
+      <div id="pm-messages" class="flex-1 overflow-y-auto p-4 space-y-2 text-sm">
+        {% for m in history %}
+        <div class="max-w-[80%] rounded-lg px-3 py-2 {% if m.sender_id == current_user.id %}pm-mine{% else %}pm-other{% endif %}">
+          <div class="text-xs opacity-70 mb-0.5">{{ m.sender.username if m.sender else m.sender_id }} · {{ m.created_at.strftime('%H:%M') if m.created_at else '' }}</div>
+          <div>{{ m.content }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <form id="pm-form" class="p-3 border-t flex gap-2" style="border-color:#e0d4bc;">
+        <input type="text" id="pm-input" class="input flex-1" placeholder="Message privé…" autocomplete="off" maxlength="2000" />
+        <button type="submit" class="btn-primary px-4">Envoyer</button>
+      </form>
+      {% else %}
+      <div class="flex-1 flex items-center justify-center text-sm" style="color:#8a7b68;">
+        Sélectionne un ami pour discuter
+      </div>
+      {% endif %}
+    </section>
+  </div>
+
+  {% if peer %}
+  <script>
+    const ME_ID = {{ current_user.id }};
+    const PEER_ID = {{ peer.id }};
+    const ROOM = {{ room|tojson }};
+    const AUTO_CALL = new URLSearchParams(location.search).get("call") === "1";
+
+    const socket = io();
+    socket.on("connect", () => {
+      socket.emit("join_user_room");
+      socket.emit("join_pm", { room: ROOM });
+    });
+
+    const box = document.getElementById("pm-messages");
+    function appendPm(m) {
+      const mine = m.sender_id === ME_ID;
+      const div = document.createElement("div");
+      div.className = "max-w-[80%] rounded-lg px-3 py-2 " + (mine ? "pm-mine" : "pm-other");
+      div.innerHTML = `<div class="text-xs opacity-70 mb-0.5">${esc(m.sender || "")} · ${m.created_at || ""}</div><div>${esc(m.content)}</div>`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+    function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+    socket.on("pm_message", appendPm);
+
+    document.getElementById("pm-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = document.getElementById("pm-input");
+      const content = input.value.trim();
+      if (!content) return;
+      socket.emit("pm_message", { receiver_id: PEER_ID, content });
+      input.value = "";
+    });
+    box.scrollTop = box.scrollHeight;
+
+    let pc = null;
+    let localStream = null;
+    const localVideo = document.getElementById("local-video");
+    const remoteVideo = document.getElementById("remote-video");
+    const callBox = document.getElementById("call-box");
+    const callStatus = document.getElementById("call-status");
+
+    async function ensurePC() {
+      if (pc) return pc;
+      pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          socket.emit("call_signal", { target_id: PEER_ID, type: "ice", candidate: e.candidate });
+        }
+      };
+      pc.ontrack = (e) => { remoteVideo.srcObject = e.streams[0]; };
+      return pc;
+    }
+
+    async function startCall() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        localVideo.srcObject = localStream;
+        callBox.classList.remove("hidden");
+        document.getElementById("btn-hangup").classList.remove("hidden");
+        callStatus.textContent = "Appel en cours…";
+        const peerConn = await ensurePC();
+        localStream.getTracks().forEach((t) => peerConn.addTrack(t, localStream));
+        const offer = await peerConn.createOffer();
+        await peerConn.setLocalDescription(offer);
+        socket.emit("call_signal", { target_id: PEER_ID, type: "offer", sdp: peerConn.localDescription });
+      } catch (err) {
+        alert("Impossible d'accéder au micro/caméra : " + err.message);
+      }
+    }
+
+    async function hangup() {
+      if (localStream) { localStream.getTracks().forEach((t) => t.stop()); localStream = null; }
+      if (pc) { pc.close(); pc = null; }
+      localVideo.srcObject = null;
+      remoteVideo.srcObject = null;
+      callBox.classList.add("hidden");
+      document.getElementById("btn-hangup").classList.add("hidden");
+      socket.emit("call_signal", { target_id: PEER_ID, type: "hangup" });
+      callStatus.textContent = "";
+    }
+
+    document.getElementById("btn-call").addEventListener("click", startCall);
+    document.getElementById("btn-hangup").addEventListener("click", hangup);
+
+    socket.on("call_signal", async (data) => {
+      if (data.from_id !== PEER_ID) return;
+      if (data.type === "hangup") { hangup(); return; }
+      const peerConn = await ensurePC();
+      if (data.type === "offer") {
+        if (!localStream) {
+          try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            localVideo.srcObject = localStream;
+            localStream.getTracks().forEach((t) => peerConn.addTrack(t, localStream));
+          } catch (e) { alert("Micro/caméra refusés"); return; }
+        }
+        callBox.classList.remove("hidden");
+        document.getElementById("btn-hangup").classList.remove("hidden");
+        callStatus.textContent = "Appel entrant de " + (data.from_username || "…");
+        await peerConn.setRemoteDescription(data.sdp);
+        const answer = await peerConn.createAnswer();
+        await peerConn.setLocalDescription(answer);
+        socket.emit("call_signal", { target_id: PEER_ID, type: "answer", sdp: peerConn.localDescription });
+      } else if (data.type === "answer") {
+        await peerConn.setRemoteDescription(data.sdp);
+        callStatus.textContent = "Connecté";
+      } else if (data.type === "ice" && data.candidate) {
+        try { await peerConn.addIceCandidate(data.candidate); } catch (e) {}
+      }
+    });
+
+    if (AUTO_CALL) startCall();
+  </script>
+  {% endif %}
+</body>
+</html>
