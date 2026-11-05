@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TFE Hub Live – Partage & Chat en temps réel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>TFE Hub Live – Partage & Chat</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -22,64 +22,81 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased">
 
-  <!-- Navbar -->
-  <nav class="bg-white/90 backdrop-blur border-b border-slate-200 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
-      <a href="/" class="flex items-center gap-2 font-bold text-lg text-primary-700">
-        <span>🎓</span> TFE Hub <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">LIVE</span>
+  <nav class="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between h-14">
+      <a href="/" class="flex items-center gap-2 font-bold text-base sm:text-lg text-primary-700">
+        <span>🎓</span> TFE Hub
+        <span class="text-[10px] sm:text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">LIVE</span>
       </a>
-      <div class="flex items-center gap-4 text-sm">
-        <a href="#projets" class="hover:text-primary-600">Projets</a>
-        <a href="#deposer" class="hover:text-primary-600">Déposer</a>
-        <a href="#chat" class="hover:text-primary-600 font-semibold text-accent-600">💬 Chat Live</a>
+      <div class="flex items-center gap-3 text-sm">
+        <a href="#projets" class="hidden sm:inline hover:text-primary-600">Projets</a>
+        <a href="#deposer" class="hidden sm:inline hover:text-primary-600">Déposer</a>
+        <a href="#chat" class="font-semibold text-accent-600">💬 Chat</a>
       </div>
     </div>
   </nav>
 
-  <!-- Hero -->
-  <header class="bg-gradient-to-br from-primary-700 via-primary-600 to-accent-600 text-white py-16 text-center">
-    <h1 class="text-4xl sm:text-5xl font-extrabold mb-4">TFE Hub <span class="text-primary-100">Live</span></h1>
-    <p class="text-lg text-primary-100 max-w-xl mx-auto">Dépose ton projet • Discute en temps réel avec les autres étudiants</p>
+  <header class="bg-gradient-to-br from-primary-700 via-primary-600 to-accent-600 text-white py-10 sm:py-14 text-center px-4">
+    <h1 class="text-3xl sm:text-4xl font-extrabold mb-2">TFE Hub <span class="text-primary-100">Live</span></h1>
+    <p class="text-sm sm:text-base text-primary-100 max-w-lg mx-auto">Dépose ton projet • Like • Discute en temps réel</p>
   </header>
 
-  <div class="max-w-7xl mx-auto px-4 py-10 grid lg:grid-cols-3 gap-8">
+  <div class="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8 grid lg:grid-cols-3 gap-6">
 
-    <!-- Colonne principale : Projets + Formulaire -->
-    <div class="lg:col-span-2 space-y-10">
+    <div class="lg:col-span-2 space-y-8">
 
-      <!-- Liste des projets -->
       <section id="projets">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-2xl font-bold">Projets TFE</h2>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <h2 class="text-xl sm:text-2xl font-bold">Projets TFE</h2>
           <span id="project-count" class="text-sm text-slate-500">{{ projects|length }} projet(s)</span>
         </div>
+
+        <form method="GET" action="/" class="flex flex-col sm:flex-row gap-2 mb-5">
+          <input type="search" name="q" value="{{ q }}" placeholder="Rechercher un projet, auteur..."
+            class="input flex-1" />
+          <select name="domaine" class="input sm:w-44" onchange="this.form.submit()">
+            <option value="all" {% if domaine == 'all' %}selected{% endif %}>Tous les domaines</option>
+            <option value="informatique" {% if domaine == 'informatique' %}selected{% endif %}>Informatique</option>
+            <option value="data" {% if domaine == 'data' %}selected{% endif %}>Data / IA</option>
+            <option value="web" {% if domaine == 'web' %}selected{% endif %}>Web / Mobile</option>
+            <option value="cyber" {% if domaine == 'cyber' %}selected{% endif %}>Cybersécurité</option>
+            <option value="autre" {% if domaine == 'autre' %}selected{% endif %}>Autre</option>
+          </select>
+          <button type="submit" class="px-4 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">Filtrer</button>
+        </form>
+
         <div id="projects-list" class="grid sm:grid-cols-2 gap-4">
           {% for p in projects %}
-          <article class="project-card bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-            <div class="flex justify-between items-start mb-2">
+          <article class="project-card bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm" data-id="{{ p.id }}">
+            <div class="flex justify-between items-start mb-2 gap-2">
               <span class="badge badge-{{ p.domaine }}">{{ p.domaine }}</span>
-              <span class="text-xs text-slate-400">{{ p.created_at.strftime('%d/%m/%Y') if p.created_at else '' }}</span>
+              <span class="text-xs text-slate-400 whitespace-nowrap">{{ p.created_at.strftime('%d/%m/%Y') if p.created_at else '' }}</span>
             </div>
-            <h3 class="font-bold text-lg mb-1">{{ p.titre }}</h3>
+            <h3 class="font-bold text-base sm:text-lg mb-1 leading-snug">
+              <a href="/projet/{{ p.id }}" class="hover:text-primary-600">{{ p.titre }}</a>
+            </h3>
             <p class="text-sm text-slate-500 mb-3 line-clamp-2">{{ p.description }}</p>
             <div class="flex justify-between items-center text-sm">
-              <span class="font-medium">{{ p.auteur }}</span>
-              {% if p.lien %}
-              <a href="{{ p.lien }}" target="_blank" class="text-primary-600 hover:underline">Lien →</a>
-              {% endif %}
+              <span class="font-medium text-slate-700">{{ p.auteur }}</span>
+              <div class="flex items-center gap-3">
+                <button onclick="likeProject({{ p.id }}, this)" class="like-btn flex items-center gap-1 text-slate-500 hover:text-rose-500 transition">
+                  <span>❤️</span>
+                  <span class="like-count font-medium">{{ p.likes or 0 }}</span>
+                </button>
+                <a href="/projet/{{ p.id }}" class="text-primary-600 hover:underline text-xs sm:text-sm">Voir →</a>
+              </div>
             </div>
           </article>
           {% else %}
-          <p class="col-span-2 text-center text-slate-400 py-10">Aucun projet pour le moment. Sois le premier !</p>
+          <p class="col-span-2 text-center text-slate-400 py-10">Aucun projet trouvé. Sois le premier !</p>
           {% endfor %}
         </div>
       </section>
 
-      <!-- Formulaire dépôt -->
-      <section id="deposer" class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-        <h2 class="text-xl font-bold mb-5">Déposer un projet TFE</h2>
-        <form id="project-form" class="space-y-4">
-          <div class="grid sm:grid-cols-2 gap-4">
+      <section id="deposer" class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm">
+        <h2 class="text-lg sm:text-xl font-bold mb-4">Déposer un projet TFE</h2>
+        <form id="project-form" class="space-y-3 sm:space-y-4">
+          <div class="grid sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-sm font-medium mb-1">Prénom & Nom *</label>
               <input type="text" name="auteur" required class="input" placeholder="Nassim Maouche" />
@@ -93,7 +110,7 @@
             <label class="block text-sm font-medium mb-1">Titre du projet *</label>
             <input type="text" name="titre" required class="input" placeholder="Mon super TFE..." />
           </div>
-          <div class="grid sm:grid-cols-2 gap-4">
+          <div class="grid sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-sm font-medium mb-1">Domaine *</label>
               <select name="domaine" required class="input">
@@ -124,38 +141,39 @@
       </section>
     </div>
 
-    <!-- Colonne droite : Chat Live -->
     <div id="chat" class="lg:col-span-1">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-20 flex flex-col" style="height: 620px;">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden sticky top-16 flex flex-col h-[70vh] lg:h-[620px]">
         <div class="bg-gradient-to-r from-accent-600 to-primary-600 text-white px-4 py-3 flex items-center justify-between">
-          <div class="font-semibold">💬 Chat Live</div>
+          <div class="font-semibold text-sm sm:text-base">💬 Chat Live</div>
           <div id="online-status" class="text-xs bg-white/20 px-2 py-0.5 rounded-full">● En ligne</div>
         </div>
 
-        <div id="username-box" class="p-4 border-b border-slate-100">
-          <label class="block text-sm font-medium mb-1">Ton pseudo pour le chat</label>
+        <div id="username-box" class="p-3 border-b border-slate-100">
+          <label class="block text-sm font-medium mb-1">Ton pseudo</label>
           <div class="flex gap-2">
-            <input type="text" id="username-input" maxlength="30" placeholder="Ex: Nassim" class="input flex-1" />
-            <button id="join-btn" class="px-4 py-2 rounded-lg bg-accent-600 text-white text-sm font-medium hover:bg-accent-700">Rejoindre</button>
+            <input type="text" id="username-input" maxlength="30" placeholder="Ex: Nassim" class="input flex-1 text-sm" />
+            <button id="join-btn" class="px-3 py-2 rounded-lg bg-accent-600 text-white text-sm font-medium hover:bg-accent-700 shrink-0">Rejoindre</button>
           </div>
         </div>
 
-        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
-          <p class="text-center text-slate-400 text-sm">Choisis un pseudo pour commencer à discuter</p>
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50 text-sm">
+          <p class="text-center text-slate-400 text-xs">Choisis un pseudo pour discuter</p>
         </div>
 
-        <div id="chat-input-box" class="p-3 border-t border-slate-200 bg-white hidden">
+        <div id="typing-indicator" class="px-3 py-1 text-xs text-slate-400 hidden">Quelqu’un écrit...</div>
+
+        <div id="chat-input-box" class="p-2 sm:p-3 border-t border-slate-200 bg-white hidden">
           <form id="chat-form" class="flex gap-2">
-            <input type="text" id="message-input" maxlength="500" placeholder="Écris un message..." class="input flex-1" autocomplete="off" />
-            <button type="submit" class="px-4 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700">Envoyer</button>
+            <input type="text" id="message-input" maxlength="500" placeholder="Écris un message..." class="input flex-1 text-sm" autocomplete="off" />
+            <button type="submit" class="px-3 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 shrink-0">➤</button>
           </form>
         </div>
       </div>
     </div>
   </div>
 
-  <footer class="text-center text-sm text-slate-400 py-8 border-t border-slate-200 mt-8">
-    TFE Hub Live – Base de données SQLite + Chat temps réel (SocketIO) · TFE Informatique 2025/2026
+  <footer class="text-center text-xs text-slate-400 py-6 border-t border-slate-200 mt-4">
+    TFE Hub Live · Recherche · Likes · Chat temps réel · TFE Informatique 2025/2026
   </footer>
 
   <script src="/static/js/app.js"></script>
