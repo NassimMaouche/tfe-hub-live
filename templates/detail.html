@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>{{ project.titre }} – TFE Hub Live</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+            accent: { 500: '#8b5cf6', 600: '#7c3aed' }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+
+  <nav class="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-50">
+    <div class="max-w-3xl mx-auto px-4 flex items-center justify-between h-14">
+      <a href="/" class="flex items-center gap-2 font-bold text-primary-700">
+        <span>←</span> TFE Hub
+      </a>
+      <span class="badge badge-{{ project.domaine }}">{{ project.domaine }}</span>
+    </div>
+  </nav>
+
+  <main class="max-w-3xl mx-auto px-4 py-8">
+    <article class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm mb-6">
+      <div class="flex flex-wrap items-center gap-3 mb-3 text-sm text-slate-500">
+        <span>{{ project.created_at.strftime('%d/%m/%Y') if project.created_at else '' }}</span>
+        <span>·</span>
+        <span class="font-medium text-slate-700">{{ project.auteur }}</span>
+        {% if project.annee %}<span>·</span><span>{{ project.annee }}</span>{% endif %}
+      </div>
+
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-4 leading-tight">{{ project.titre }}</h1>
+
+      <p class="text-slate-600 leading-relaxed mb-6 whitespace-pre-line">{{ project.description }}</p>
+
+      <div class="flex flex-wrap items-center gap-4">
+        <button onclick="likeProject({{ project.id }}, this)" class="like-btn flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition font-medium">
+          <span>❤️</span>
+          <span class="like-count">{{ project.likes or 0 }}</span>
+          <span class="text-sm">likes</span>
+        </button>
+        {% if project.lien %}
+        <a href="{{ project.lien }}" target="_blank" rel="noopener"
+          class="px-4 py-2 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 transition">
+          Voir le projet →
+        </a>
+        {% endif %}
+      </div>
+    </article>
+
+    <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+      <h2 class="text-lg font-bold mb-4">Commentaires ({{ comments|length }})</h2>
+
+      <form id="comment-form" class="mb-6 space-y-3">
+        <input type="text" id="comment-auteur" required placeholder="Ton prénom" class="input" maxlength="80" />
+        <textarea id="comment-content" required rows="3" placeholder="Ton avis ou ta question..." class="input" maxlength="1000"></textarea>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-accent-600 text-white font-medium hover:bg-accent-700 transition">
+          Publier le commentaire
+        </button>
+      </form>
+
+      <div id="comments-list" class="space-y-4">
+        {% for c in comments %}
+        <div class="border-l-4 border-primary-200 pl-4 py-1">
+          <div class="flex items-center gap-2 text-sm mb-1">
+            <span class="font-semibold">{{ c.auteur }}</span>
+            <span class="text-slate-400">{{ c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else '' }}</span>
+          </div>
+          <p class="text-slate-600 text-sm">{{ c.content }}</p>
+        </div>
+        {% else %}
+        <p class="text-slate-400 text-sm text-center py-4">Aucun commentaire pour le moment. Sois le premier !</p>
+        {% endfor %}
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const PROJECT_ID = {{ project.id }};
+
+    async function likeProject(id, btn) {
+      try {
+        const res = await fetch(`/api/projects/${id}/like`, { method: "POST" });
+        const data = await res.json();
+        btn.querySelector(".like-count").textContent = data.likes;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    document.getElementById("comment-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const auteur = document.getElementById("comment-auteur").value.trim();
+      const content = document.getElementById("comment-content").value.trim();
+      if (!auteur || !content) return;
+
+      try {
+        const res = await fetch(`/api/projects/${PROJECT_ID}/comments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ auteur, content }),
+        });
+        if (!res.ok) throw new Error("Erreur");
+        const c = await res.json();
+        const list = document.getElementById("comments-list");
+        const empty = list.querySelector("p");
+        if (empty) empty.remove();
+        const div = document.createElement("div");
+        div.className = "border-l-4 border-primary-200 pl-4 py-1";
+        div.innerHTML = `
+          <div class="flex items-center gap-2 text-sm mb-1">
+            <span class="font-semibold">${escapeHtml(c.auteur)}</span>
+            <span class="text-slate-400">${c.created_at || ""}</span>
+          </div>
+          <p class="text-slate-600 text-sm">${escapeHtml(c.content)}</p>
+        `;
+        list.prepend(div);
+        document.getElementById("comment-content").value = "";
+      } catch (err) {
+        alert("Erreur lors de l'envoi du commentaire");
+      }
+    });
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>
