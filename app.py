@@ -227,7 +227,9 @@ def init_db():
             print("✅ Base initialisée avec 3 projets de démo")
 
 
+# Initialise la base au démarrage (local + Render/gunicorn)
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     print("🚀 TFE Hub Live démarré → http://localhost:5000")
     socketio.run(app, host="0.0.0.0", port=5000, debug=True)
