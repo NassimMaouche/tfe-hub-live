@@ -5,6 +5,7 @@
   border-radius: 0.5rem;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
+  font-size: 16px;
 }
 .input:focus {
   border-color: #3b82f6;
@@ -33,9 +34,7 @@
   box-shadow: 0 8px 20px -6px rgb(0 0 0 / 0.1);
 }
 
-.chat-msg {
-  max-width: 85%;
-}
+.chat-msg { max-width: 85%; }
 .chat-msg.mine {
   margin-left: auto;
   background: #2563eb;
@@ -52,4 +51,24 @@
   font-size: 0.75rem;
   text-align: center;
   max-width: 100%;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+button, a, .like-btn {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.like-btn {
+  min-width: auto;
+  min-height: auto;
+  padding: 0.25rem 0.5rem;
 }
