@@ -1,54 +1,74 @@
+/* TFE Hub – Style sobre & professionnel */
 .input {
   width: 100%;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
   outline: none;
+  font-size: 14px;
+  background: #fff;
   transition: border-color 0.15s, box-shadow 0.15s;
-  font-size: 16px;
 }
 .input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.2);
 }
+
+.label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.btn-primary {
+  background: #0f172a;
+  color: #fff;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: background 0.15s;
+  border: none;
+  cursor: pointer;
+}
+.btn-primary:hover { background: #1e293b; }
 
 .badge {
   display: inline-flex;
-  padding: 0.15rem 0.6rem;
-  border-radius: 9999px;
-  font-size: 0.7rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.65rem;
   font-weight: 600;
-  text-transform: capitalize;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
-.badge-informatique { background: #dbeafe; color: #1e40af; }
-.badge-data { background: #ede9fe; color: #5b21b6; }
-.badge-web { background: #d1fae5; color: #065f46; }
-.badge-cyber { background: #fee2e2; color: #991b1b; }
-.badge-autre { background: #f1f5f9; color: #475569; }
+.badge-informatique { background: #f1f5f9; color: #334155; }
+.badge-data { background: #f1f5f9; color: #334155; }
+.badge-web { background: #f1f5f9; color: #334155; }
+.badge-cyber { background: #f1f5f9; color: #334155; }
+.badge-autre { background: #f1f5f9; color: #64748b; }
 
-.project-card {
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-.project-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px -6px rgb(0 0 0 / 0.1);
-}
+.project-card:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
 
 .chat-msg { max-width: 85%; }
 .chat-msg.mine {
   margin-left: auto;
-  background: #2563eb;
-  color: white;
+  background: #0f172a;
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.75rem;
 }
 .chat-msg.other {
-  background: white;
+  background: #fff;
   border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.75rem;
 }
 .chat-msg.system {
   margin: 0 auto;
-  background: transparent;
   color: #94a3b8;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-align: center;
   max-width: 100%;
 }
@@ -60,15 +80,4 @@
   overflow: hidden;
 }
 
-button, a, .like-btn {
-  min-height: 44px;
-  min-width: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.like-btn {
-  min-width: auto;
-  min-height: auto;
-  padding: 0.25rem 0.5rem;
-}
+.like-btn { cursor: pointer; background: none; border: none; padding: 0.15rem 0.35rem; }
