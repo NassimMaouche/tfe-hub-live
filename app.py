@@ -1,7 +1,7 @@
 """
 TFE Hub Live – Version professionnelle
 ======================================
-Comptes utilisateurs + interface sobre + chat live + likes
+Comptes obligatoires + thème feuille jaune + chat live
 """
 
 from datetime import datetime
@@ -31,13 +31,11 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="gevent")
 
 class User(db.Model):
     __tablename__ = "users"
-
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
     projects = db.relationship("Project", backref="owner", lazy=True)
     comments = db.relationship("Comment", backref="author_user", lazy=True)
 
@@ -50,7 +48,6 @@ class User(db.Model):
 
 class Project(db.Model):
     __tablename__ = "projects"
-
     id = db.Column(db.Integer, primary_key=True)
     titre = db.Column(db.String(255), nullable=False)
     auteur = db.Column(db.String(120), nullable=False)
@@ -79,7 +76,6 @@ class Project(db.Model):
 
 class Message(db.Model):
     __tablename__ = "messages"
-
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), nullable=False)
     content = db.Column(db.Text, nullable=False)
@@ -98,7 +94,6 @@ class Message(db.Model):
 
 class Comment(db.Model):
     __tablename__ = "comments"
-
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False)
     auteur = db.Column(db.String(80), nullable=False)
@@ -120,7 +115,7 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user_id" not in session:
-            flash("Connecte-toi pour accéder à cette page.", "warning")
+            flash("Connecte-toi ou crée un compte pour accéder au site.", "warning")
             return redirect(url_for("login", next=request.path))
         return f(*args, **kwargs)
     return decorated
@@ -141,13 +136,11 @@ def inject_user():
 def register():
     if current_user():
         return redirect(url_for("index"))
-
     if request.method == "POST":
         username = (request.form.get("username") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
         password2 = request.form.get("password2") or ""
-
         errors = []
         if len(username) < 3:
             errors.append("Le pseudo doit faire au moins 3 caractères.")
@@ -161,22 +154,18 @@ def register():
             errors.append("Ce pseudo est déjà pris.")
         if User.query.filter_by(email=email).first():
             errors.append("Cet email est déjà utilisé.")
-
         if errors:
             for e in errors:
                 flash(e, "error")
             return render_template("register.html", username=username, email=email)
-
         user = User(username=username, email=email)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-
         session["user_id"] = user.id
         session["username"] = user.username
-        flash(f"Bienvenue {user.username} ! Compte créé avec succès.", "success")
+        flash(f"Bienvenue {user.username} ! Compte créé.", "success")
         return redirect(url_for("index"))
-
     return render_template("register.html")
 
 
@@ -184,24 +173,19 @@ def register():
 def login():
     if current_user():
         return redirect(url_for("index"))
-
     if request.method == "POST":
         login_id = (request.form.get("login") or "").strip()
         password = request.form.get("password") or ""
-
         user = User.query.filter(
             db.or_(User.username == login_id, User.email == login_id.lower())
         ).first()
-
         if user and user.check_password(password):
             session["user_id"] = user.id
             session["username"] = user.username
             flash(f"Bon retour, {user.username}.", "success")
             next_url = request.args.get("next") or url_for("index")
             return redirect(next_url)
-
         flash("Identifiants incorrects.", "error")
-
     return render_template("login.html")
 
 
@@ -209,14 +193,14 @@ def login():
 def logout():
     session.clear()
     flash("Tu es déconnecté.", "success")
-    return redirect(url_for("index"))
+    return redirect(url_for("login"))
 
 
 @app.route("/")
+@login_required
 def index():
     q = request.args.get("q", "").strip()
     domaine = request.args.get("domaine", "").strip()
-
     query = Project.query
     if q:
         like = f"%{q}%"
@@ -229,12 +213,12 @@ def index():
         )
     if domaine and domaine != "all":
         query = query.filter(Project.domaine == domaine)
-
     projects = query.order_by(Project.likes.desc(), Project.created_at.desc()).all()
     return render_template("index.html", projects=projects, q=q, domaine=domaine or "all")
 
 
 @app.route("/projet/<int:project_id>")
+@login_required
 def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
     comments = (
@@ -247,27 +231,21 @@ def project_detail(project_id):
 
 @app.route("/api/projects", methods=["POST"])
 def api_create_project():
+    if "user_id" not in session:
+        return jsonify({"error": "Connexion requise"}), 401
     data = request.get_json() or request.form
     titre = (data.get("titre") or "").strip()
     description = (data.get("description") or "").strip()
     domaine = (data.get("domaine") or "autre").strip()
-
     user = current_user()
     auteur = user.username if user else (data.get("auteur") or "").strip()
     email = user.email if user else (data.get("email") or "").strip()
-
     if not titre or not auteur or not description:
         return jsonify({"error": "Champs obligatoires manquants"}), 400
-
     project = Project(
-        titre=titre,
-        auteur=auteur,
-        email=email,
-        domaine=domaine,
-        annee=(data.get("annee") or "").strip(),
-        description=description,
-        lien=(data.get("lien") or "").strip(),
-        likes=0,
+        titre=titre, auteur=auteur, email=email, domaine=domaine,
+        annee=(data.get("annee") or "").strip(), description=description,
+        lien=(data.get("lien") or "").strip(), likes=0,
         user_id=user.id if user else None,
     )
     db.session.add(project)
@@ -278,6 +256,8 @@ def api_create_project():
 
 @app.route("/api/projects/<int:project_id>/like", methods=["POST"])
 def api_like(project_id):
+    if "user_id" not in session:
+        return jsonify({"error": "Connexion requise"}), 401
     project = Project.query.get_or_404(project_id)
     project.likes = (project.likes or 0) + 1
     db.session.commit()
@@ -287,6 +267,8 @@ def api_like(project_id):
 
 @app.route("/api/projects/<int:project_id>/comments", methods=["POST"])
 def api_add_comment(project_id):
+    if "user_id" not in session:
+        return jsonify({"error": "Connexion requise"}), 401
     Project.query.get_or_404(project_id)
     data = request.get_json() or {}
     user = current_user()
@@ -294,12 +276,8 @@ def api_add_comment(project_id):
     content = (data.get("content") or "").strip()[:1000]
     if not auteur or not content:
         return jsonify({"error": "Auteur et message obligatoires"}), 400
-    comment = Comment(
-        project_id=project_id,
-        auteur=auteur,
-        content=content,
-        user_id=user.id if user else None,
-    )
+    comment = Comment(project_id=project_id, auteur=auteur, content=content,
+                      user_id=user.id if user else None)
     db.session.add(comment)
     db.session.commit()
     return jsonify(comment.to_dict()), 201
@@ -311,8 +289,7 @@ def api_messages():
     messages = (
         Message.query.filter_by(room=room)
         .order_by(Message.created_at.desc())
-        .limit(100)
-        .all()
+        .limit(100).all()
     )
     return jsonify([m.to_dict() for m in reversed(messages)])
 
@@ -327,16 +304,12 @@ def on_join(data):
     username = data.get("username", "Anonyme")
     room = data.get("room", "general")
     join_room(room)
-    emit(
-        "chat_message",
-        {
-            "username": "Système",
-            "content": f"{username} a rejoint le chat",
-            "created_at": datetime.utcnow().strftime("%H:%M"),
-            "system": True,
-        },
-        room=room,
-    )
+    emit("chat_message", {
+        "username": "Système",
+        "content": f"{username} a rejoint le chat",
+        "created_at": datetime.utcnow().strftime("%H:%M"),
+        "system": True,
+    }, room=room)
 
 
 @socketio.on("send_message")
@@ -354,12 +327,8 @@ def on_send_message(data):
 
 @socketio.on("typing")
 def on_typing(data):
-    emit(
-        "user_typing",
-        {"username": data.get("username", "")},
-        room=data.get("room", "general"),
-        include_self=False,
-    )
+    emit("user_typing", {"username": data.get("username", "")},
+         room=data.get("room", "general"), include_self=False)
 
 
 def init_db():
@@ -375,34 +344,18 @@ def init_db():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-
         if Project.query.count() == 0:
             demos = [
-                Project(
-                    titre="BudgetAI – Assistant de gestion budgétaire",
-                    auteur="Nassim M.",
-                    domaine="informatique",
-                    annee="2025-2026",
-                    description="Application Python + Streamlit pour le suivi budgétaire avec catégorisation intelligente.",
-                    lien="https://github.com/NassimMaouche/tfe-hub",
-                    likes=12,
-                ),
-                Project(
-                    titre="SmartCampus – Gestion de salles",
-                    auteur="Sarah K.",
-                    domaine="web",
-                    annee="2025-2026",
-                    description="Plateforme web de réservation de salles en temps réel.",
-                    likes=8,
-                ),
-                Project(
-                    titre="DetectFraud – Détection de fraudes par ML",
-                    auteur="Yassine B.",
-                    domaine="data",
-                    annee="2024-2025",
-                    description="Modèle de machine learning pour identifier les transactions suspectes.",
-                    likes=15,
-                ),
+                Project(titre="BudgetAI – Assistant de gestion budgétaire", auteur="Nassim M.",
+                        domaine="informatique", annee="2025-2026",
+                        description="Application Python + Streamlit pour le suivi budgétaire.",
+                        lien="https://github.com/NassimMaouche/tfe-hub", likes=12),
+                Project(titre="SmartCampus – Gestion de salles", auteur="Sarah K.",
+                        domaine="web", annee="2025-2026",
+                        description="Plateforme web de réservation de salles.", likes=8),
+                Project(titre="DetectFraud – Détection de fraudes par ML", auteur="Yassine B.",
+                        domaine="data", annee="2024-2025",
+                        description="Modèle ML pour identifier les transactions suspectes.", likes=15),
             ]
             db.session.add_all(demos)
             db.session.commit()
