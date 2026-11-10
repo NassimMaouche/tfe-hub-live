@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Favoris – TFE Hub</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap" style="display:flex;width:100%;align-items:center;justify-content:space-between;">
+      <a href="/" class="logo"><span class="logo-badge">TH</span> TFE Hub</a>
+      <nav class="nav-links">
+        <a href="/">Projets</a>
+        <a href="/favoris" class="active">Favoris</a>
+        <a href="/amis">Amis</a>
+        <a href="/messages">Messages</a>
+        <a href="/notifications">Notifs</a>
+        <a href="/profil">Profil</a>
+        <a href="/logout">Déconnexion</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap" style="max-width:720px;padding:1.5rem 1rem;">
+    <h1 style="font-size:1.3rem;margin-bottom:1rem;">Mes favoris</h1>
+    {% for p in projects %}
+    <article class="card project">
+      <span class="badge">{{ p.domaine }}</span>
+      <h3 style="margin-top:0.35rem;"><a href="/projet/{{ p.id }}">{{ p.titre }}</a></h3>
+      <p class="muted line-clamp">{{ p.description }}</p>
+      <p class="muted" style="margin-top:0.35rem;">{{ p.auteur }} · ♥ {{ p.likes or 0 }}</p>
+    </article>
+    {% else %}
+    <p class="muted">Aucun favori. Clique ☆ sur un projet pour l’ajouter.</p>
+    {% endfor %}
+  </main>
+</body>
+</html>

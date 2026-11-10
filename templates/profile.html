@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ profile.username }} – Profil</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap" style="display:flex;width:100%;align-items:center;justify-content:space-between;">
+      <a href="/" class="logo"><span class="logo-badge">TH</span> TFE Hub</a>
+      <nav class="nav-links">
+        <a href="/">Projets</a>
+        <a href="/favoris">Favoris</a>
+        <a href="/amis">Amis</a>
+        <a href="/messages">Messages</a>
+        <a href="/notifications">Notifs</a>
+        <a href="/profil" class="active">Profil</a>
+        <a href="/logout">Déconnexion</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap" style="max-width:720px;padding:1.5rem 1rem;">
+    <div class="card" style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+      {% if profile.avatar %}
+      <img src="/uploads/avatars/{{ profile.avatar }}" alt="" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--border);" />
+      {% else %}
+      <div style="width:80px;height:80px;border-radius:50%;background:var(--btn);color:var(--paper);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;">
+        {{ profile.username[:1]|upper }}
+      </div>
+      {% endif %}
+      <div style="flex:1;">
+        <h1 style="font-size:1.35rem;">{{ profile.username }}</h1>
+        <p class="muted">
+          {% if profile.ecole %}{{ profile.ecole }}{% endif %}
+          {% if profile.filiere %} · {{ profile.filiere }}{% endif %}
+          {% if profile.annee_etudes %} · {{ profile.annee_etudes }}{% endif %}
+        </p>
+        {% if profile.bio %}<p style="margin-top:0.5rem;color:var(--ink2);">{{ profile.bio }}</p>{% endif %}
+        {% if is_me %}
+        <a class="btn" href="/profil/edit" style="display:inline-block;margin-top:0.75rem;text-decoration:none;">Modifier le profil</a>
+        {% endif %}
+      </div>
+    </div>
+    <h2 style="font-size:1.1rem;margin:1.5rem 0 0.75rem;">Projets ({{ projects|length }})</h2>
+    {% for p in projects %}
+    <article class="card project">
+      <span class="badge">{{ p.domaine }}</span>
+      <h3 style="margin-top:0.35rem;"><a href="/projet/{{ p.id }}">{{ p.titre }}</a></h3>
+      <p class="muted line-clamp">{{ p.description }}</p>
+    </article>
+    {% else %}
+    <p class="muted">Aucun projet publié.</p>
+    {% endfor %}
+  </main>
+</body>
+</html>

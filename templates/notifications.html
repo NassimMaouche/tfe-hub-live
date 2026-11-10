@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notifications – TFE Hub</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap" style="display:flex;width:100%;align-items:center;justify-content:space-between;">
+      <a href="/" class="logo"><span class="logo-badge">TH</span> TFE Hub</a>
+      <nav class="nav-links">
+        <a href="/">Projets</a>
+        <a href="/favoris">Favoris</a>
+        <a href="/amis">Amis</a>
+        <a href="/messages">Messages</a>
+        <a href="/notifications" class="active">Notifs</a>
+        <a href="/profil">Profil</a>
+        <a href="/logout">Déconnexion</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap" style="max-width:640px;padding:1.5rem 1rem;">
+    <h1 style="font-size:1.3rem;margin-bottom:1rem;">Notifications</h1>
+    {% for n in notifs %}
+    <div class="card" style="margin-bottom:0.5rem;{% if not n.is_read %}border-color:var(--gold);{% endif %}">
+      <p style="margin:0;">
+        {% if n.link %}<a href="{{ n.link }}">{{ n.text }}</a>{% else %}{{ n.text }}{% endif %}
+      </p>
+      <p class="muted" style="margin:0.25rem 0 0;">{{ n.created_at.strftime('%d/%m/%Y %H:%M') if n.created_at else '' }} · {{ n.kind }}</p>
+    </div>
+    {% else %}
+    <p class="muted">Aucune notification pour le moment.</p>
+    {% endfor %}
+  </main>
+</body>
+</html>

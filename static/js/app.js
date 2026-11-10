@@ -23,19 +23,16 @@ document.addEventListener("DOMContentLoaded", () => {
 async function submitProject(e) {
   e.preventDefault();
   const form = e.target;
-  const data = Object.fromEntries(new FormData(form));
+  const fd = new FormData(form);
   try {
-    const res = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Erreur");
+    const res = await fetch("/api/projects", { method: "POST", body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Erreur");
     form.reset();
     alert("Projet publié !");
     location.reload();
   } catch (err) {
-    alert("Erreur lors de la publication.");
+    alert(err.message || "Erreur lors de la publication.");
   }
 }
 
@@ -45,6 +42,15 @@ async function likeProject(id, btn) {
     const data = await res.json();
     const el = btn.querySelector(".like-count");
     if (el) el.textContent = data.likes;
+  } catch (e) {}
+}
+
+async function toggleFav(id, btn) {
+  try {
+    const res = await fetch("/api/favorite/" + id, { method: "POST" });
+    const data = await res.json();
+    if (data.favorited) btn.textContent = "★";
+    else btn.textContent = "☆";
   } catch (e) {}
 }
 

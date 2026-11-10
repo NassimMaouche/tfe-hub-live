@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Modifier le profil</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap" style="display:flex;width:100%;align-items:center;justify-content:space-between;">
+      <a href="/profil" class="muted">← Profil</a>
+      <span class="logo"><span class="logo-badge">TH</span></span>
+    </div>
+  </header>
+  <main class="wrap" style="max-width:480px;padding:1.5rem 1rem;">
+    <h1 style="font-size:1.3rem;margin-bottom:1rem;">Mon profil</h1>
+    <form method="POST" enctype="multipart/form-data" class="card" style="display:flex;flex-direction:column;gap:0.75rem;">
+      <div>
+        <label class="label">Photo</label>
+        <input class="input" type="file" name="avatar" accept="image/*" />
+      </div>
+      <div>
+        <label class="label">École</label>
+        <input class="input" name="ecole" value="{{ profile.ecole or '' }}" placeholder="ex: EPHEC" />
+      </div>
+      <div>
+        <label class="label">Filière</label>
+        <input class="input" name="filiere" value="{{ profile.filiere or '' }}" placeholder="ex: Informatique" />
+      </div>
+      <div>
+        <label class="label">Année d'études</label>
+        <input class="input" name="annee_etudes" value="{{ profile.annee_etudes or '' }}" placeholder="ex: BAC 3" />
+      </div>
+      <div>
+        <label class="label">Bio</label>
+        <textarea class="input" name="bio" rows="3" maxlength="500">{{ profile.bio or '' }}</textarea>
+      </div>
+      <button class="btn" type="submit">Enregistrer</button>
+    </form>
+  </main>
+</body>
+</html>
