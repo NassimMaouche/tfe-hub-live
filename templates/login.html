@@ -15,8 +15,10 @@
   </header>
   <main class="auth-page">
     <div class="auth-box">
-      <h1 style="font-size:1.35rem;">Connexion</h1>
-      <p class="muted" style="margin-bottom:1.25rem;">Un compte est obligatoire pour accéder à la plateforme.</p>
+      <h1 style="font-size:1.4rem;">Connexion obligatoire</h1>
+      <p class="muted" style="margin-bottom:1rem;">
+        Tu dois te connecter ou créer un compte pour accéder au site.
+      </p>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in messages %}
         <div class="flash flash-{{ cat if cat in ['error','success','warning'] else 'warning' }}">{{ msg }}</div>
@@ -25,16 +27,17 @@
       <form method="POST" class="card" style="display:flex;flex-direction:column;gap:0.85rem;">
         <div>
           <label class="label">Pseudo ou email</label>
-          <input class="input" type="text" name="login" required autofocus />
+          <input class="input" type="text" name="login" required autofocus autocomplete="username" />
         </div>
         <div>
           <label class="label">Mot de passe</label>
-          <input class="input" type="password" name="password" required />
+          <input class="input" type="password" name="password" required autocomplete="current-password" />
         </div>
         <button class="btn" type="submit" style="width:100%;">Se connecter</button>
       </form>
-      <p class="muted" style="text-align:center;margin-top:1rem;">
-        Pas de compte ? <a href="{{ url_for('register') }}">Créer un compte</a>
+      <p class="muted" style="text-align:center;margin-top:1.25rem;font-size:0.95rem;">
+        Pas encore de compte ?<br />
+        <a href="{{ url_for('register') }}" style="font-weight:600;font-size:1rem;">Créer un compte →</a>
       </p>
     </div>
   </main>

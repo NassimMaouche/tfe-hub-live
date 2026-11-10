@@ -16,7 +16,7 @@
   <main class="auth-page">
     <div class="auth-box">
       <h1 style="font-size:1.35rem;">Créer un compte</h1>
-      <p class="muted" style="margin-bottom:1.25rem;">Obligatoire pour voir les projets, le chat et les messages.</p>
+      <p class="muted" style="margin-bottom:1.25rem;">Obligatoire pour accéder aux projets et messages.</p>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in messages %}
         <div class="flash flash-{{ cat if cat in ['error','success','warning'] else 'error' }}">{{ msg }}</div>
