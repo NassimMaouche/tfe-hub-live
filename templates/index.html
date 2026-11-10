@@ -14,33 +14,21 @@
       <a href="/" class="logo"><span class="logo-badge">TH</span> TFE Hub</a>
       <nav class="nav-links">
         <a href="/" class="active">Projets</a>
+        <a href="/favoris">Favoris</a>
         <a href="/amis">Amis</a>
         <a href="/messages">Messages</a>
-        <span class="muted" style="padding:0 0.35rem;">{{ current_user.username }}</span>
+        <a href="/notifications">Notifs{% if notif_count %} ({{ notif_count }}){% endif %}</a>
+        <a href="/profil">Profil</a>
         <a href="/logout">Déconnexion</a>
       </nav>
     </div>
   </header>
-  <div class="wrap">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for cat, msg in messages %}
-      <div class="flash flash-{{ cat if cat in ['error','success','warning'] else 'success' }}">{{ msg }}</div>
-      {% endfor %}
-    {% endwith %}
-  </div>
-  <section class="hero">
-    <div class="wrap">
-      <h1 style="font-size:1.6rem;">Projets de fin d’études</h1>
-      <p class="muted">Dépose ton TFE, like, discute — réservé aux étudiants connectés.</p>
-    </div>
-  </section>
+  <div class="wrap">{% with messages = get_flashed_messages(with_categories=true) %}{% for cat, msg in messages %}<div class="flash flash-{{ cat if cat in ['error','success','warning'] else 'success' }}">{{ msg }}</div>{% endfor %}{% endwith %}</div>
+  <section class="hero"><div class="wrap"><h1 style="font-size:1.6rem;">Projets de fin d’études</h1><p class="muted">Dépose ton TFE (PDF), like, discute, ajoute en favoris.</p></div></section>
   <div class="wrap" style="padding-top:1.5rem;padding-bottom:2rem;">
     <div class="grid grid-main">
       <div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-          <h2 style="font-size:1.1rem;">Projets</h2>
-          <span class="muted">{{ projects|length }}</span>
-        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;"><h2 style="font-size:1.1rem;">Projets</h2><span class="muted">{{ projects|length }}</span></div>
         <form method="GET" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">
           <input class="input" style="flex:1;min-width:140px;" type="search" name="q" value="{{ q }}" placeholder="Rechercher…" />
           <select class="input" name="domaine" style="width:auto;" onchange="this.form.submit()">
@@ -58,37 +46,35 @@
           <article class="card project" data-id="{{ p.id }}">
             <div style="display:flex;justify-content:space-between;gap:0.5rem;margin-bottom:0.35rem;">
               <span class="badge">{{ p.domaine }}</span>
-              <button class="btn-outline like-btn" onclick="likeProject({{ p.id }}, this)">♥ <span class="like-count">{{ p.likes or 0 }}</span></button>
+              <span style="display:flex;gap:0.35rem;">
+                <button class="btn-outline" type="button" onclick="toggleFav({{ p.id }}, this)">{% if p.id in fav_ids %}★{% else %}☆{% endif %}</button>
+                <button class="btn-outline like-btn" type="button" onclick="likeProject({{ p.id }}, this)">♥ <span class="like-count">{{ p.likes or 0 }}</span></button>
+              </span>
             </div>
             <h3><a href="/projet/{{ p.id }}">{{ p.titre }}</a></h3>
             <p class="muted line-clamp">{{ p.description }}</p>
             <div style="display:flex;justify-content:space-between;margin-top:0.5rem;" class="muted">
-              <span>{{ p.auteur }}{% if p.annee %} · {{ p.annee }}{% endif %}</span>
+              <span>{{ p.auteur }}{% if p.annee %} · {{ p.annee }}{% endif %}{% if p.pdf_file %} · PDF{% endif %}</span>
               <a href="/projet/{{ p.id }}">Détails →</a>
             </div>
           </article>
-          {% else %}
-          <p class="muted" style="text-align:center;padding:2rem;">Aucun projet.</p>
-          {% endfor %}
+          {% else %}<p class="muted" style="text-align:center;padding:2rem;">Aucun projet.</p>{% endfor %}
         </div>
         <section class="card" style="margin-top:1.5rem;">
           <h2 style="font-size:1.1rem;margin-bottom:0.75rem;">Déposer un projet</h2>
-          <form id="project-form" style="display:flex;flex-direction:column;gap:0.65rem;">
+          <form id="project-form" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:0.65rem;">
             <div><label class="label">Titre *</label><input class="input" name="titre" required /></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
               <div><label class="label">Domaine *</label>
                 <select class="input" name="domaine" required>
-                  <option value="informatique">Informatique</option>
-                  <option value="data">Data / IA</option>
-                  <option value="web">Web</option>
-                  <option value="cyber">Cybersécurité</option>
-                  <option value="autre">Autre</option>
+                  <option value="informatique">Informatique</option><option value="data">Data / IA</option><option value="web">Web</option><option value="cyber">Cybersécurité</option><option value="autre">Autre</option>
                 </select>
               </div>
               <div><label class="label">Année</label><input class="input" name="annee" placeholder="2025-2026" /></div>
             </div>
             <div><label class="label">Description *</label><textarea class="input" name="description" rows="3" required></textarea></div>
             <div><label class="label">Lien</label><input class="input" type="url" name="lien" placeholder="https://" /></div>
+            <div><label class="label">PDF du TFE (max 15 Mo)</label><input class="input" type="file" name="pdf" accept=".pdf,application/pdf" /></div>
             <button class="btn" type="submit">Publier</button>
           </form>
         </section>
@@ -96,28 +82,19 @@
       <aside>
         <div class="card chat-box">
           <div style="padding:0.65rem 0.85rem;border-bottom:1px solid var(--border);background:var(--paper2);display:flex;justify-content:space-between;">
-            <strong style="font-size:0.875rem;">Chat général</strong>
-            <span class="muted" id="online-status">● Hors ligne</span>
+            <strong style="font-size:0.875rem;">Chat général</strong><span class="muted" id="online-status">● Hors ligne</span>
           </div>
           <div id="username-box" style="padding:0.65rem;border-bottom:1px solid var(--border);display:flex;gap:0.4rem;">
-            <input class="input" id="username-input" value="{{ current_user.username }}" maxlength="30" />
-            <button class="btn" id="join-btn" type="button">OK</button>
+            <input class="input" id="username-input" value="{{ current_user.username }}" maxlength="30" /><button class="btn" id="join-btn" type="button">OK</button>
           </div>
-          <div class="chat-msgs" id="chat-messages">
-            <p class="muted" style="text-align:center;padding:1rem;">Clique OK pour rejoindre</p>
-          </div>
+          <div class="chat-msgs" id="chat-messages"><p class="muted" style="text-align:center;padding:1rem;">Clique OK pour rejoindre</p></div>
           <div id="typing-indicator" class="muted" style="padding:0 0.75rem;font-size:0.7rem;display:none;"></div>
-          <form id="chat-form" style="display:none;padding:0.5rem;border-top:1px solid var(--border);gap:0.4rem;">
-            <div style="display:flex;gap:0.4rem;width:100%;">
-              <input class="input" id="message-input" placeholder="Message…" maxlength="500" autocomplete="off" />
-              <button class="btn" type="submit">→</button>
-            </div>
-          </form>
+          <form id="chat-form" style="display:none;padding:0.5rem;border-top:1px solid var(--border);"><div style="display:flex;gap:0.4rem;width:100%;"><input class="input" id="message-input" placeholder="Message…" maxlength="500" autocomplete="off" /><button class="btn" type="submit">→</button></div></form>
         </div>
       </aside>
     </div>
   </div>
-  <footer>TFE Hub · Comptes · Amis · Messages · Appels · 2025/2026</footer>
+  <footer>TFE Hub · Profil · PDF · Favoris · Notifications</footer>
   <script src="/static/js/app.js"></script>
 </body>
 </html>
