@@ -304,6 +304,33 @@ def messages_page(user_id=None):
     return render_template("messages.html", friends=friends, peer=peer, history=history, room=room)
 
 
+@app.route("/api/pm/<int:user_id>", methods=["POST"])
+@login_required
+def api_send_pm(user_id):
+    me = current_user()
+    if not are_friends(me.id, user_id):
+        return jsonify({"error": "Pas amis"}), 403
+    data = request.get_json(silent=True) or {}
+    content = (data.get("content") or "").strip()[:2000]
+    if not content:
+        return jsonify({"error": "Message vide"}), 400
+    pm = PrivateMessage(sender_id=me.id, receiver_id=user_id, content=content)
+    db.session.add(pm)
+    db.session.commit()
+    payload = {
+        "id": pm.id,
+        "sender_id": me.id,
+        "receiver_id": user_id,
+        "sender": me.username,
+        "content": content,
+        "created_at": pm.created_at.strftime("%d/%m %H:%M") if pm.created_at else "",
+    }
+    room = pm_room(me.id, user_id)
+    socketio.emit("pm_message", payload, room=room)
+    socketio.emit("pm_message", payload, room=f"user_{user_id}")
+    return jsonify(payload), 201
+
+
 @app.route("/api/friends/request", methods=["POST"])
 @login_required
 def api_friend_request():
@@ -462,14 +489,29 @@ def on_pm_message(data):
     if not me_id:
         return
     data = data or {}
-    receiver_id = int(data.get("receiver_id") or 0)
+    try:
+        receiver_id = int(data.get("receiver_id") or 0)
+    except (TypeError, ValueError):
+        return
     content = (data.get("content") or "").strip()[:2000]
-    if not content or not receiver_id or not are_friends(me_id, receiver_id):
+    if not content or not receiver_id:
+        return
+    if not are_friends(me_id, receiver_id):
         return
     pm = PrivateMessage(sender_id=me_id, receiver_id=receiver_id, content=content)
     db.session.add(pm)
     db.session.commit()
-    emit("pm_message", pm.to_dict(), room=pm_room(me_id, receiver_id))
+    payload = {
+        "id": pm.id,
+        "sender_id": me_id,
+        "receiver_id": receiver_id,
+        "sender": session.get("username") or "?",
+        "content": content,
+        "created_at": pm.created_at.strftime("%d/%m %H:%M") if pm.created_at else "",
+    }
+    room = pm_room(me_id, receiver_id)
+    emit("pm_message", payload, room=room)
+    emit("pm_message", payload, room=f"user_{receiver_id}")
 
 
 @socketio.on("call_signal")
