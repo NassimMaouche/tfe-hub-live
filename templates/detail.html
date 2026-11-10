@@ -16,12 +16,19 @@
   </header>
   <main class="wrap" style="max-width:720px;padding:1.5rem 1rem;">
     <article class="card" style="margin-bottom:1rem;">
-      <p class="muted">{{ project.created_at.strftime('%d/%m/%Y') if project.created_at else '' }} · {{ project.auteur }}{% if project.annee %} · {{ project.annee }}{% endif %}</p>
+      <p class="muted">
+        {{ project.created_at.strftime('%d/%m/%Y') if project.created_at else '' }}
+        · {% if owner %}<a href="/profil/{{ owner.id }}">{{ project.auteur }}</a>{% else %}{{ project.auteur }}{% endif %}
+        {% if project.annee %} · {{ project.annee }}{% endif %}
+        · {{ project.views or 0 }} vues
+      </p>
       <h1 style="font-size:1.4rem;margin:0.5rem 0;">{{ project.titre }}</h1>
       <p style="white-space:pre-line;line-height:1.55;color:var(--ink2);">{{ project.description }}</p>
       <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
-        <button class="btn-outline" onclick="likeProject({{ project.id }}, this)">♥ <span class="like-count">{{ project.likes or 0 }}</span></button>
-        {% if project.lien %}<a class="btn" href="{{ project.lien }}" target="_blank" rel="noopener">Voir le projet →</a>{% endif %}
+        <button class="btn-outline" type="button" onclick="toggleFav({{ project.id }}, this)">{% if is_fav %}★ Favori{% else %}☆ Favori{% endif %}</button>
+        <button class="btn-outline" type="button" onclick="likeProject({{ project.id }}, this)">♥ <span class="like-count">{{ project.likes or 0 }}</span></button>
+        {% if project.lien %}<a class="btn" href="{{ project.lien }}" target="_blank" rel="noopener">Lien projet →</a>{% endif %}
+        {% if project.pdf_file %}<a class="btn" href="/uploads/pdfs/{{ project.pdf_file }}" target="_blank">Télécharger le PDF</a>{% endif %}
       </div>
     </article>
     <section class="card">
@@ -47,6 +54,11 @@
       const res = await fetch("/api/projects/" + id + "/like", { method: "POST" });
       const data = await res.json();
       btn.querySelector(".like-count").textContent = data.likes;
+    }
+    async function toggleFav(id, btn) {
+      const res = await fetch("/api/favorite/" + id, { method: "POST" });
+      const data = await res.json();
+      btn.textContent = data.favorited ? "★ Favori" : "☆ Favori";
     }
     document.getElementById("comment-form").addEventListener("submit", async (e) => {
       e.preventDefault();
