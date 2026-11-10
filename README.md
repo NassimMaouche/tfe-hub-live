@@ -1,27 +1,22 @@
 # TFE Hub Live
 
-Plateforme professionnelle de partage de projets TFE.
+Comptes obligatoires | Projets | Amis | Messages privés | Chat | Appels WebRTC
 
-## Fonctionnalités
-
-- Comptes utilisateurs (inscription / connexion)
-- Base de données SQLite (users, projects, comments, messages)
-- Recherche et filtres par domaine
-- Likes sur les projets
-- Page détail + commentaires
-- Chat en temps réel (SocketIO)
-- Interface sobre et professionnelle
-
-## Lancement
+## Local
 
 ```bash
 pip install -r requirements.txt
 python app.py
 ```
 
-## Déploiement Render
+## Render
 
-Start Command :
-```
-gunicorn --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 --bind 0.0.0.0:$PORT app:app
-```
+- Build: `pip install -r requirements.txt`
+- Start: voir Procfile
+- Runtime: Python 3.12
+
+## Utilisation
+
+1. Créer un compte (obligatoire)
+2. Amis → ajouter un pseudo → accepter
+3. Messages → conversation → Appeler (2 personnes en ligne)
