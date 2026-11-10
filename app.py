@@ -1,6 +1,5 @@
 """
-TFE Hub Live – version stable
-Comptes obligatoires | Projets | Amis | Messages privés | Chat | Appels WebRTC
+TFE Hub Live – auth obligatoire + messages privés fiables
 """
 import os
 from datetime import datetime
@@ -18,12 +17,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DATA_DIR / "tfe_hub.db"
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "tfe-hub-secret-change-me-2026")
-app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "tfe-hub-secret-2026-nassim")
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DATA_DIR / 'tfe_hub.db'}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
 
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="gevent", manage_session=True)
@@ -64,16 +64,6 @@ class PrivateMessage(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_read = db.Column(db.Boolean, default=False)
     sender = db.relationship("User", foreign_keys=[sender_id])
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "sender_id": self.sender_id,
-            "receiver_id": self.receiver_id,
-            "sender": self.sender.username if self.sender else "?",
-            "content": self.content,
-            "created_at": self.created_at.strftime("%d/%m %H:%M") if self.created_at else "",
-        }
 
 
 class Project(db.Model):
@@ -131,21 +121,14 @@ class Comment(db.Model):
         }
 
 
-def login_required(f):
-    @wraps(f)
-    def wrapped(*args, **kwargs):
-        if "user_id" not in session:
-            flash("Connecte-toi pour accéder au site.", "warning")
-            return redirect(url_for("login", next=request.path))
-        return f(*args, **kwargs)
-    return wrapped
-
-
 def current_user():
     uid = session.get("user_id")
-    if uid:
+    if not uid:
+        return None
+    try:
         return db.session.get(User, uid)
-    return None
+    except Exception:
+        return None
 
 
 def are_friends(a, b):
@@ -159,13 +142,31 @@ def are_friends(a, b):
 
 
 def pm_room(a, b):
-    x, y = sorted([a, b])
+    x, y = sorted([int(a), int(b)])
     return f"pm_{x}_{y}"
 
 
 @app.context_processor
 def inject_globals():
     return {"current_user": current_user()}
+
+
+@app.before_request
+def require_login_everywhere():
+    if request.endpoint and str(request.endpoint).startswith("static"):
+        return None
+    if request.endpoint in ("login", "register"):
+        return None
+    if request.path.startswith("/socket.io"):
+        return None
+    if session.get("user_id"):
+        u = current_user()
+        if u:
+            return None
+        session.clear()
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Connexion requise"}), 401
+    return redirect(url_for("login", next=request.path))
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -180,7 +181,7 @@ def register():
         errors = []
         if len(username) < 3:
             errors.append("Pseudo : minimum 3 caractères.")
-        if "@" not in email or "." not in email:
+        if "@" not in email:
             errors.append("Email invalide.")
         if len(password) < 6:
             errors.append("Mot de passe : minimum 6 caractères.")
@@ -222,6 +223,8 @@ def login():
             session["username"] = user.username
             flash(f"Bon retour, {user.username}.", "success")
             nxt = request.args.get("next") or url_for("index")
+            if nxt in ("/login", "/register"):
+                nxt = url_for("index")
             return redirect(nxt)
         flash("Identifiants incorrects.", "error")
     return render_template("login.html")
@@ -235,14 +238,15 @@ def logout():
 
 
 @app.route("/")
-@login_required
 def index():
     q = (request.args.get("q") or "").strip()
     domaine = (request.args.get("domaine") or "").strip()
     query = Project.query
     if q:
         like = f"%{q}%"
-        query = query.filter(db.or_(Project.titre.ilike(like), Project.description.ilike(like), Project.auteur.ilike(like)))
+        query = query.filter(db.or_(
+            Project.titre.ilike(like), Project.description.ilike(like), Project.auteur.ilike(like)
+        ))
     if domaine and domaine != "all":
         query = query.filter(Project.domaine == domaine)
     projects = query.order_by(Project.likes.desc(), Project.created_at.desc()).all()
@@ -250,7 +254,6 @@ def index():
 
 
 @app.route("/projet/<int:project_id>")
-@login_required
 def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
     comments = Comment.query.filter_by(project_id=project_id).order_by(Comment.created_at.desc()).all()
@@ -258,7 +261,6 @@ def project_detail(project_id):
 
 
 @app.route("/amis")
-@login_required
 def friends_page():
     me = current_user()
     accepted = Friendship.query.filter(
@@ -269,16 +271,19 @@ def friends_page():
     incoming = Friendship.query.filter_by(addressee_id=me.id, status="pending").all()
     outgoing = Friendship.query.filter_by(requester_id=me.id, status="pending").all()
     related = {me.id}
-    for f in Friendship.query.filter(db.or_(Friendship.requester_id == me.id, Friendship.addressee_id == me.id)).all():
+    for f in Friendship.query.filter(
+        db.or_(Friendship.requester_id == me.id, Friendship.addressee_id == me.id)
+    ).all():
         related.add(f.requester_id)
         related.add(f.addressee_id)
-    others = User.query.filter(~User.id.in_(related)).order_by(User.username).limit(40).all() if related else User.query.order_by(User.username).limit(40).all()
-    return render_template("friends.html", friends=friends, incoming=incoming, outgoing=outgoing, others=others)
+    others = User.query.filter(~User.id.in_(related)).order_by(User.username).limit(50).all()
+    return render_template(
+        "friends.html", friends=friends, incoming=incoming, outgoing=outgoing, others=others
+    )
 
 
 @app.route("/messages")
 @app.route("/messages/<int:user_id>")
-@login_required
 def messages_page(user_id=None):
     me = current_user()
     accepted = Friendship.query.filter(
@@ -289,27 +294,42 @@ def messages_page(user_id=None):
     peer = None
     history = []
     room = None
-    if user_id:
+    if user_id is not None:
         peer = User.query.get_or_404(user_id)
+        if peer.id == me.id:
+            flash("Tu ne peux pas t'écrire à toi-même.", "warning")
+            return redirect(url_for("messages_page"))
         if not are_friends(me.id, peer.id):
-            flash("Vous devez être amis pour discuter en privé.", "warning")
+            flash("Vous devez être amis. Va dans Amis pour envoyer / accepter une demande.", "warning")
             return redirect(url_for("friends_page"))
-        history = PrivateMessage.query.filter(db.or_(
-            db.and_(PrivateMessage.sender_id == me.id, PrivateMessage.receiver_id == peer.id),
-            db.and_(PrivateMessage.sender_id == peer.id, PrivateMessage.receiver_id == me.id),
-        )).order_by(PrivateMessage.created_at.asc()).limit(200).all()
-        PrivateMessage.query.filter_by(sender_id=peer.id, receiver_id=me.id, is_read=False).update({"is_read": True})
+        history = (
+            PrivateMessage.query.filter(
+                db.or_(
+                    db.and_(PrivateMessage.sender_id == me.id, PrivateMessage.receiver_id == peer.id),
+                    db.and_(PrivateMessage.sender_id == peer.id, PrivateMessage.receiver_id == me.id),
+                )
+            )
+            .order_by(PrivateMessage.created_at.asc())
+            .limit(300)
+            .all()
+        )
+        PrivateMessage.query.filter_by(
+            sender_id=peer.id, receiver_id=me.id, is_read=False
+        ).update({"is_read": True})
         db.session.commit()
         room = pm_room(me.id, peer.id)
-    return render_template("messages.html", friends=friends, peer=peer, history=history, room=room)
+    return render_template(
+        "messages.html", friends=friends, peer=peer, history=history, room=room
+    )
 
 
 @app.route("/api/pm/<int:user_id>", methods=["POST"])
-@login_required
 def api_send_pm(user_id):
     me = current_user()
+    if not me:
+        return jsonify({"error": "Connexion requise"}), 401
     if not are_friends(me.id, user_id):
-        return jsonify({"error": "Pas amis"}), 403
+        return jsonify({"error": "Vous devez être amis"}), 403
     data = request.get_json(silent=True) or {}
     content = (data.get("content") or "").strip()[:2000]
     if not content:
@@ -325,14 +345,15 @@ def api_send_pm(user_id):
         "content": content,
         "created_at": pm.created_at.strftime("%d/%m %H:%M") if pm.created_at else "",
     }
-    room = pm_room(me.id, user_id)
-    socketio.emit("pm_message", payload, room=room)
-    socketio.emit("pm_message", payload, room=f"user_{user_id}")
+    try:
+        socketio.emit("pm_message", payload, room=pm_room(me.id, user_id))
+        socketio.emit("pm_message", payload, room=f"user_{user_id}")
+    except Exception:
+        pass
     return jsonify(payload), 201
 
 
 @app.route("/api/friends/request", methods=["POST"])
-@login_required
 def api_friend_request():
     me = current_user()
     data = request.get_json(silent=True) or {}
@@ -341,7 +362,7 @@ def api_friend_request():
         uname = (data.get("username") or "").strip()
         target = User.query.filter_by(username=uname).first()
         if not target:
-            return jsonify({"error": "Utilisateur introuvable"}), 404
+            return jsonify({"error": "Utilisateur introuvable. Vérifie le pseudo."}), 404
         target_id = target.id
     target_id = int(target_id)
     if target_id == me.id:
@@ -353,6 +374,10 @@ def api_friend_request():
         db.and_(Friendship.requester_id == target_id, Friendship.addressee_id == me.id),
     )).first()
     if exists:
+        if exists.status == "pending" and exists.addressee_id == me.id:
+            exists.status = "accepted"
+            db.session.commit()
+            return jsonify({"ok": True, "accepted": True})
         return jsonify({"error": "Demande déjà existante"}), 400
     fr = Friendship(requester_id=me.id, addressee_id=target_id, status="pending")
     db.session.add(fr)
@@ -361,7 +386,6 @@ def api_friend_request():
 
 
 @app.route("/api/friends/accept", methods=["POST"])
-@login_required
 def api_friend_accept():
     me = current_user()
     data = request.get_json(silent=True) or {}
@@ -374,7 +398,6 @@ def api_friend_accept():
 
 
 @app.route("/api/friends/reject", methods=["POST"])
-@login_required
 def api_friend_reject():
     me = current_user()
     data = request.get_json(silent=True) or {}
@@ -387,18 +410,19 @@ def api_friend_reject():
 
 
 @app.route("/api/projects", methods=["POST"])
-@login_required
 def api_create_project():
+    me = current_user()
     data = request.get_json(silent=True) or request.form
-    user = current_user()
     titre = (data.get("titre") or "").strip()
     description = (data.get("description") or "").strip()
     domaine = (data.get("domaine") or "autre").strip()
     if not titre or not description:
         return jsonify({"error": "Titre et description obligatoires"}), 400
-    project = Project(titre=titre, auteur=user.username, email=user.email, domaine=domaine,
+    project = Project(
+        titre=titre, auteur=me.username, email=me.email, domaine=domaine,
         annee=(data.get("annee") or "").strip(), description=description,
-        lien=(data.get("lien") or "").strip(), likes=0, user_id=user.id)
+        lien=(data.get("lien") or "").strip(), likes=0, user_id=me.id,
+    )
     db.session.add(project)
     db.session.commit()
     socketio.emit("new_project", project.to_dict())
@@ -406,7 +430,6 @@ def api_create_project():
 
 
 @app.route("/api/projects/<int:pid>/like", methods=["POST"])
-@login_required
 def api_like(pid):
     project = Project.query.get_or_404(pid)
     project.likes = (project.likes or 0) + 1
@@ -416,22 +439,20 @@ def api_like(pid):
 
 
 @app.route("/api/projects/<int:pid>/comments", methods=["POST"])
-@login_required
 def api_comment(pid):
     Project.query.get_or_404(pid)
+    me = current_user()
     data = request.get_json(silent=True) or {}
-    user = current_user()
     content = (data.get("content") or "").strip()[:1000]
     if not content:
         return jsonify({"error": "Message vide"}), 400
-    c = Comment(project_id=pid, auteur=user.username, content=content, user_id=user.id)
+    c = Comment(project_id=pid, auteur=me.username, content=content, user_id=me.id)
     db.session.add(c)
     db.session.commit()
     return jsonify(c.to_dict()), 201
 
 
 @app.route("/api/messages")
-@login_required
 def api_messages():
     room = request.args.get("room", "general")
     msgs = Message.query.filter_by(room=room).order_by(Message.created_at.desc()).limit(100).all()
@@ -451,8 +472,12 @@ def on_join(data):
     username = (data or {}).get("username") or session.get("username") or "Anonyme"
     room = (data or {}).get("room") or "general"
     join_room(room)
-    emit("chat_message", {"username": "Système", "content": f"{username} a rejoint le chat",
-         "created_at": datetime.utcnow().strftime("%H:%M"), "system": True}, room=room)
+    emit("chat_message", {
+        "username": "Système",
+        "content": f"{username} a rejoint le chat",
+        "created_at": datetime.utcnow().strftime("%H:%M"),
+        "system": True,
+    }, room=room)
 
 
 @socketio.on("send_message")
@@ -494,23 +519,17 @@ def on_pm_message(data):
     except (TypeError, ValueError):
         return
     content = (data.get("content") or "").strip()[:2000]
-    if not content or not receiver_id:
-        return
-    if not are_friends(me_id, receiver_id):
+    if not content or not receiver_id or not are_friends(me_id, receiver_id):
         return
     pm = PrivateMessage(sender_id=me_id, receiver_id=receiver_id, content=content)
     db.session.add(pm)
     db.session.commit()
     payload = {
-        "id": pm.id,
-        "sender_id": me_id,
-        "receiver_id": receiver_id,
-        "sender": session.get("username") or "?",
-        "content": content,
+        "id": pm.id, "sender_id": me_id, "receiver_id": receiver_id,
+        "sender": session.get("username") or "?", "content": content,
         "created_at": pm.created_at.strftime("%d/%m %H:%M") if pm.created_at else "",
     }
-    room = pm_room(me_id, receiver_id)
-    emit("pm_message", payload, room=room)
+    emit("pm_message", payload, room=pm_room(me_id, receiver_id))
     emit("pm_message", payload, room=f"user_{receiver_id}")
 
 
@@ -540,15 +559,17 @@ def init_db():
     with app.app_context():
         db.create_all()
         if Project.query.count() == 0:
-            demos = [
-                Project(titre="BudgetAI – Assistant budgétaire", auteur="Nassim M.", domaine="informatique",
-                        annee="2025-2026", description="Application Python pour le suivi budgétaire.", likes=12),
-                Project(titre="SmartCampus – Gestion de salles", auteur="Sarah K.", domaine="web",
-                        annee="2025-2026", description="Plateforme web de réservation de salles.", likes=8),
-                Project(titre="DetectFraud – ML fraudes bancaires", auteur="Yassine B.", domaine="data",
-                        annee="2024-2025", description="Modèle ML pour détecter les transactions suspectes.", likes=15),
-            ]
-            db.session.add_all(demos)
+            db.session.add_all([
+                Project(titre="BudgetAI – Assistant budgétaire", auteur="Nassim M.",
+                        domaine="informatique", annee="2025-2026",
+                        description="Application Python pour le suivi budgétaire.", likes=12),
+                Project(titre="SmartCampus – Gestion de salles", auteur="Sarah K.",
+                        domaine="web", annee="2025-2026",
+                        description="Plateforme web de réservation de salles.", likes=8),
+                Project(titre="DetectFraud – ML fraudes", auteur="Yassine B.",
+                        domaine="data", annee="2024-2025",
+                        description="Modèle ML pour détecter les transactions suspectes.", likes=15),
+            ])
             db.session.commit()
 
 
@@ -556,5 +577,4 @@ init_db()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    print(f"TFE Hub → http://0.0.0.0:{port}")
     socketio.run(app, host="0.0.0.0", port=port, debug=False)
