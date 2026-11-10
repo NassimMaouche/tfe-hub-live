@@ -2,96 +2,63 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ project.titre }} – TFE Hub</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/static/css/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    body { font-family: 'Source Sans 3', system-ui, sans-serif; background: #faf6eb; color: #3d3429; }
-    h1, h2 { font-family: 'Libre Baskerville', Georgia, serif; }
-  </style>
 </head>
-<body class="min-h-screen">
-  <header class="sticky top-0 z-50 border-b" style="background:#fffdf7;border-color:#e0d4bc;">
-    <div class="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-      <a href="/" class="text-sm font-medium hover:underline" style="color:#6b5e4f;">← Retour</a>
+<body>
+  <header class="nav">
+    <div class="wrap" style="display:flex;width:100%;align-items:center;justify-content:space-between;">
+      <a href="/" class="muted">← Retour</a>
       <span class="badge">{{ project.domaine }}</span>
     </div>
   </header>
-  <main class="max-w-3xl mx-auto px-4 py-8">
-    <article class="rounded-lg p-6 sm:p-8 mb-6 border" style="background:#fffdf7;border-color:#e0d4bc;">
-      <div class="text-xs mb-3" style="color:#8a7b68;">
-        {{ project.created_at.strftime('%d/%m/%Y') if project.created_at else '' }}
-        · {{ project.auteur }}{% if project.annee %} · {{ project.annee }}{% endif %}
-      </div>
-      <h1 class="text-2xl font-bold mb-4 leading-snug" style="color:#3d3429;">{{ project.titre }}</h1>
-      <p class="leading-relaxed mb-6 whitespace-pre-line" style="color:#6b5e4f;">{{ project.description }}</p>
-      <div class="flex flex-wrap gap-3">
-        <button onclick="likeProject({{ project.id }}, this)" class="like-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm" style="border-color:#e0d4bc;color:#6b5e4f;">
-          <span>♥</span> <span class="like-count">{{ project.likes or 0 }}</span>
-        </button>
-        {% if project.lien %}
-        <a href="{{ project.lien }}" target="_blank" rel="noopener" class="btn-primary inline-flex items-center px-3 py-1.5 text-sm">Voir le projet →</a>
-        {% endif %}
+  <main class="wrap" style="max-width:720px;padding:1.5rem 1rem;">
+    <article class="card" style="margin-bottom:1rem;">
+      <p class="muted">{{ project.created_at.strftime('%d/%m/%Y') if project.created_at else '' }} · {{ project.auteur }}{% if project.annee %} · {{ project.annee }}{% endif %}</p>
+      <h1 style="font-size:1.4rem;margin:0.5rem 0;">{{ project.titre }}</h1>
+      <p style="white-space:pre-line;line-height:1.55;color:var(--ink2);">{{ project.description }}</p>
+      <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button class="btn-outline" onclick="likeProject({{ project.id }}, this)">♥ <span class="like-count">{{ project.likes or 0 }}</span></button>
+        {% if project.lien %}<a class="btn" href="{{ project.lien }}" target="_blank" rel="noopener">Voir le projet →</a>{% endif %}
       </div>
     </article>
-    <section class="rounded-lg p-6 border" style="background:#fffdf7;border-color:#e0d4bc;">
-      <h2 class="text-base font-semibold mb-4" style="color:#3d3429;">Commentaires ({{ comments|length }})</h2>
-      <form id="comment-form" class="mb-6 space-y-3">
-        <input type="hidden" id="comment-auteur" value="{{ current_user.username if current_user else '' }}" />
-        <textarea id="comment-content" required rows="3" placeholder="Ton avis…" class="input" maxlength="1000"></textarea>
-        <button type="submit" class="btn-primary px-4 py-2 text-sm">Publier</button>
+    <section class="card">
+      <h2 style="font-size:1rem;">Commentaires ({{ comments|length }})</h2>
+      <form id="comment-form" style="margin:0.75rem 0;display:flex;flex-direction:column;gap:0.5rem;">
+        <textarea class="input" id="comment-content" rows="3" placeholder="Ton avis…" required></textarea>
+        <button class="btn" type="submit" style="align-self:flex-start;">Publier</button>
       </form>
-      <div id="comments-list" class="space-y-4">
+      <div id="comments-list">
         {% for c in comments %}
-        <div class="border-l-2 pl-4" style="border-color:#e0d4bc;">
-          <div class="flex items-center gap-2 text-xs mb-1" style="color:#8a7b68;">
-            <span class="font-medium" style="color:#3d3429;">{{ c.auteur }}</span>
-            <span>{{ c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else '' }}</span>
-          </div>
-          <p class="text-sm" style="color:#6b5e4f;">{{ c.content }}</p>
+        <div style="border-left:3px solid var(--border);padding-left:0.75rem;margin-bottom:0.75rem;">
+          <div class="muted"><strong style="color:var(--ink);">{{ c.auteur }}</strong> · {{ c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else '' }}</div>
+          <p style="margin:0.25rem 0 0;color:var(--ink2);font-size:0.9rem;">{{ c.content }}</p>
         </div>
         {% else %}
-        <p class="text-sm text-center py-4" style="color:#8a7b68;">Aucun commentaire.</p>
+        <p class="muted">Aucun commentaire.</p>
         {% endfor %}
       </div>
     </section>
   </main>
   <script>
-    const PROJECT_ID = {{ project.id }};
     async function likeProject(id, btn) {
-      try {
-        const res = await fetch(`/api/projects/${id}/like`, { method: "POST" });
-        const data = await res.json();
-        btn.querySelector(".like-count").textContent = data.likes;
-      } catch (e) {}
+      const res = await fetch("/api/projects/" + id + "/like", { method: "POST" });
+      const data = await res.json();
+      btn.querySelector(".like-count").textContent = data.likes;
     }
     document.getElementById("comment-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const auteur = document.getElementById("comment-auteur").value.trim() || "Anonyme";
       const content = document.getElementById("comment-content").value.trim();
       if (!content) return;
-      try {
-        const res = await fetch(`/api/projects/${PROJECT_ID}/comments`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ auteur, content }),
-        });
-        if (!res.ok) throw new Error();
-        const c = await res.json();
-        const list = document.getElementById("comments-list");
-        const empty = list.querySelector("p");
-        if (empty) empty.remove();
-        const div = document.createElement("div");
-        div.className = "border-l-2 pl-4";
-        div.style.borderColor = "#e0d4bc";
-        div.innerHTML = `<div class="flex items-center gap-2 text-xs mb-1" style="color:#8a7b68"><span class="font-medium" style="color:#3d3429">${esc(c.auteur)}</span><span>${c.created_at||""}</span></div><p class="text-sm" style="color:#6b5e4f">${esc(c.content)}</p>`;
-        list.prepend(div);
-        document.getElementById("comment-content").value = "";
-      } catch (e) { alert("Erreur"); }
+      const res = await fetch("/api/projects/{{ project.id }}/comments", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content })
+      });
+      if (res.ok) location.reload();
+      else alert("Erreur");
     });
-    function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
   </script>
 </body>
 </html>

@@ -2,142 +2,101 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Amis – TFE Hub</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/static/css/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    body { font-family: 'Source Sans 3', system-ui, sans-serif; background: #faf6eb; color: #3d3429; }
-    h1, h2 { font-family: 'Libre Baskerville', Georgia, serif; }
-  </style>
 </head>
-<body class="min-h-screen">
-  <header class="sticky top-0 z-50 border-b" style="background:#fffdf7;border-color:#e0d4bc;">
-    <div class="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2 font-semibold" style="color:#3d3429;">
-        <span class="w-7 h-7 rounded text-xs flex items-center justify-center font-bold" style="background:#5c4a32;color:#faf6eb;">TH</span>
-        TFE Hub
-      </a>
-      <nav class="flex gap-2 text-sm">
-        <a href="/" class="px-2 py-1" style="color:#6b5e4f;">Projets</a>
-        <a href="/amis" class="px-2 py-1 font-semibold" style="color:#3d3429;">Amis</a>
-        <a href="/messages" class="px-2 py-1" style="color:#6b5e4f;">Messages</a>
-        <a href="/logout" class="px-2 py-1" style="color:#6b5e4f;">Déconnexion</a>
+<body>
+  <header class="nav">
+    <div class="wrap" style="display:flex;width:100%;align-items:center;justify-content:space-between;">
+      <a href="/" class="logo"><span class="logo-badge">TH</span> TFE Hub</a>
+      <nav class="nav-links">
+        <a href="/">Projets</a>
+        <a href="/amis" class="active">Amis</a>
+        <a href="/messages">Messages</a>
+        <a href="/logout">Déconnexion</a>
       </nav>
     </div>
   </header>
-
-  <main class="max-w-3xl mx-auto px-4 py-8 space-y-8">
-    <h1 class="text-2xl font-bold" style="color:#3d3429;">Amis</h1>
-
+  <main class="wrap" style="padding:1.5rem 1rem 2rem;max-width:720px;">
+    <h1 style="font-size:1.4rem;margin-bottom:1rem;">Amis</h1>
     {% if incoming %}
-    <section class="rounded-lg border p-5" style="background:#fffdf7;border-color:#e0d4bc;">
-      <h2 class="font-semibold mb-3">Demandes reçues</h2>
-      <ul class="space-y-2">
+    <section class="card" style="margin-bottom:1rem;">
+      <h2 style="font-size:1rem;">Demandes reçues</h2>
+      <ul style="list-style:none;padding:0;margin:0.75rem 0 0;">
         {% for fr in incoming %}
-        <li class="flex items-center justify-between text-sm">
+        <li style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--paper2);">
           <span>{{ fr.requester.username }}</span>
-          <div class="flex gap-2">
-            <button onclick="acceptFriend({{ fr.id }})" class="btn-primary px-3 py-1 text-xs">Accepter</button>
-            <button onclick="rejectFriend({{ fr.id }})" class="px-3 py-1 text-xs rounded border" style="border-color:#e0d4bc;">Refuser</button>
-          </div>
+          <span>
+            <button class="btn" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="acceptFriend({{ fr.id }})">Accepter</button>
+            <button class="btn-outline" onclick="rejectFriend({{ fr.id }})">Refuser</button>
+          </span>
         </li>
         {% endfor %}
       </ul>
     </section>
     {% endif %}
-
-    <section class="rounded-lg border p-5" style="background:#fffdf7;border-color:#e0d4bc;">
-      <h2 class="font-semibold mb-3">Mes amis ({{ friends|length }})</h2>
+    <section class="card" style="margin-bottom:1rem;">
+      <h2 style="font-size:1rem;">Mes amis ({{ friends|length }})</h2>
       {% if friends %}
-      <ul class="space-y-2">
+      <ul style="list-style:none;padding:0;margin:0.75rem 0 0;">
         {% for f in friends %}
-        <li class="flex items-center justify-between text-sm py-1 border-b" style="border-color:#f3ead6;">
-          <span class="font-medium">{{ f.username }}</span>
-          <div class="flex gap-2">
-            <a href="/messages/{{ f.id }}" class="btn-primary px-3 py-1 text-xs">Message</a>
-            <a href="/messages/{{ f.id }}?call=1" class="px-3 py-1 text-xs rounded border" style="border-color:#e0d4bc;color:#5c4a32;">Appeler</a>
-          </div>
+        <li style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--paper2);">
+          <strong>{{ f.username }}</strong>
+          <span>
+            <a class="btn" style="padding:0.25rem 0.6rem;font-size:0.75rem;text-decoration:none;" href="/messages/{{ f.id }}">Message</a>
+            <a class="btn-outline" style="text-decoration:none;" href="/messages/{{ f.id }}?call=1">Appeler</a>
+          </span>
         </li>
         {% endfor %}
       </ul>
       {% else %}
-      <p class="text-sm" style="color:#8a7b68;">Aucun ami pour le moment.</p>
+      <p class="muted" style="margin-top:0.5rem;">Aucun ami. Ajoute quelqu’un ci-dessous.</p>
       {% endif %}
     </section>
-
     {% if outgoing %}
-    <section class="rounded-lg border p-5" style="background:#fffdf7;border-color:#e0d4bc;">
-      <h2 class="font-semibold mb-3">Demandes envoyées</h2>
-      <ul class="space-y-1 text-sm" style="color:#6b5e4f;">
-        {% for fr in outgoing %}
-        <li>{{ fr.addressee.username }} — en attente</li>
-        {% endfor %}
+    <section class="card" style="margin-bottom:1rem;">
+      <h2 style="font-size:1rem;">Demandes envoyées</h2>
+      <ul class="muted" style="margin:0.5rem 0 0;padding-left:1.1rem;">
+        {% for fr in outgoing %}<li>{{ fr.addressee.username }} — en attente</li>{% endfor %}
       </ul>
     </section>
     {% endif %}
-
-    <section class="rounded-lg border p-5" style="background:#fffdf7;border-color:#e0d4bc;">
-      <h2 class="font-semibold mb-3">Ajouter un ami</h2>
-      <form id="add-form" class="flex gap-2 mb-4">
-        <input type="text" id="add-username" class="input flex-1" placeholder="Pseudo exact…" />
-        <button type="submit" class="btn-primary px-4">Ajouter</button>
+    <section class="card">
+      <h2 style="font-size:1rem;">Ajouter un ami</h2>
+      <form id="add-form" style="display:flex;gap:0.5rem;margin:0.75rem 0;">
+        <input class="input" id="add-username" placeholder="Pseudo exact…" />
+        <button class="btn" type="submit">Ajouter</button>
       </form>
       {% if others %}
-      <p class="text-xs mb-2" style="color:#8a7b68;">Suggestions</p>
-      <ul class="space-y-2">
+      <p class="muted" style="margin-bottom:0.35rem;">Suggestions</p>
+      <ul style="list-style:none;padding:0;margin:0;">
         {% for u in others %}
-        <li class="flex items-center justify-between text-sm">
+        <li style="display:flex;justify-content:space-between;padding:0.35rem 0;">
           <span>{{ u.username }}</span>
-          <button onclick="requestFriendId({{ u.id }})" class="px-3 py-1 text-xs rounded border" style="border-color:#e0d4bc;">+ Ami</button>
+          <button class="btn-outline" onclick="requestFriendId({{ u.id }})">+ Ami</button>
         </li>
         {% endfor %}
       </ul>
       {% endif %}
     </section>
   </main>
-
   <script>
-    async function requestFriendId(id) {
-      const res = await fetch("/api/friends/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: id }),
-      });
-      const data = await res.json();
+    async function post(url, body) {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) alert(data.error || "Erreur");
       else location.reload();
     }
-    document.getElementById("add-form").addEventListener("submit", async (e) => {
+    function requestFriendId(id) { post("/api/friends/request", { user_id: id }); }
+    function acceptFriend(id) { post("/api/friends/accept", { id }); }
+    function rejectFriend(id) { post("/api/friends/reject", { id }); }
+    document.getElementById("add-form").addEventListener("submit", (e) => {
       e.preventDefault();
       const username = document.getElementById("add-username").value.trim();
-      if (!username) return;
-      const res = await fetch("/api/friends/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
-      });
-      const data = await res.json();
-      if (!res.ok) alert(data.error || "Erreur");
-      else location.reload();
+      if (username) post("/api/friends/request", { username });
     });
-    async function acceptFriend(id) {
-      await fetch("/api/friends/accept", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      location.reload();
-    }
-    async function rejectFriend(id) {
-      await fetch("/api/friends/reject", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      location.reload();
-    }
   </script>
 </body>
 </html>
