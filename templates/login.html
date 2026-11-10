@@ -2,57 +2,39 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Connexion – TFE Hub</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/static/css/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    body { font-family: 'Source Sans 3', system-ui, sans-serif; background: #faf6eb; color: #3d3429; }
-    h1 { font-family: 'Libre Baskerville', Georgia, serif; }
-  </style>
 </head>
-<body class="min-h-screen flex flex-col">
-  <header class="border-b" style="background:#fffdf7;border-color:#e0d4bc;">
-    <div class="max-w-md mx-auto px-4 h-14 flex items-center">
-      <span class="flex items-center gap-2 font-semibold" style="color:#3d3429;">
-        <span class="w-7 h-7 rounded text-xs flex items-center justify-center font-bold"
-          style="background:#5c4a32;color:#faf6eb;">TH</span>
-        TFE Hub
-      </span>
+<body>
+  <header class="nav">
+    <div class="wrap" style="display:flex;width:100%;align-items:center;">
+      <span class="logo"><span class="logo-badge">TH</span> TFE Hub</span>
     </div>
   </header>
-
-  <main class="flex-1 flex items-center justify-center px-4 py-12">
-    <div class="w-full max-w-sm">
-      <h1 class="text-xl font-bold mb-1" style="color:#3d3429;">Connexion</h1>
-      <p class="text-sm mb-6" style="color:#6b5e4f;">Un compte est obligatoire pour accéder à la plateforme.</p>
-
+  <main class="auth-page">
+    <div class="auth-box">
+      <h1 style="font-size:1.35rem;">Connexion</h1>
+      <p class="muted" style="margin-bottom:1.25rem;">Un compte est obligatoire pour accéder à la plateforme.</p>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in messages %}
-        <div class="mb-4 text-sm px-3 py-2 rounded-lg border"
-          style="{% if cat=='error' %}background:#fef2f2;border-color:#fecaca;color:#991b1b;
-          {% else %}background:#f0fdf4;border-color:#bbf7d0;color:#166534;{% endif %}">
-          {{ msg }}
-        </div>
+        <div class="flash flash-{{ cat if cat in ['error','success','warning'] else 'warning' }}">{{ msg }}</div>
         {% endfor %}
       {% endwith %}
-
-      <form method="POST" class="space-y-4 rounded-lg p-6 border" style="background:#fffdf7;border-color:#e0d4bc;">
+      <form method="POST" class="card" style="display:flex;flex-direction:column;gap:0.85rem;">
         <div>
           <label class="label">Pseudo ou email</label>
-          <input type="text" name="login" required class="input" autofocus />
+          <input class="input" type="text" name="login" required autofocus />
         </div>
         <div>
           <label class="label">Mot de passe</label>
-          <input type="password" name="password" required class="input" />
+          <input class="input" type="password" name="password" required />
         </div>
-        <button type="submit" class="btn-primary w-full py-2.5">Se connecter</button>
+        <button class="btn" type="submit" style="width:100%;">Se connecter</button>
       </form>
-
-      <p class="text-center text-sm mt-4" style="color:#6b5e4f;">
-        Pas encore de compte ?
-        <a href="{{ url_for('register') }}" class="font-medium hover:underline" style="color:#a68b3d;">Créer un compte</a>
+      <p class="muted" style="text-align:center;margin-top:1rem;">
+        Pas de compte ? <a href="{{ url_for('register') }}">Créer un compte</a>
       </p>
     </div>
   </main>
