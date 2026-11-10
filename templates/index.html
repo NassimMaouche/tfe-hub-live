@@ -2,61 +2,48 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TFE Hub – Plateforme étudiante</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TFE Hub</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    body { font-family: 'Source Sans 3', system-ui, sans-serif; background: #faf6eb; color: #3d3429; }
-    h1, h2, h3 { font-family: 'Libre Baskerville', Georgia, serif; }
-  </style>
 </head>
-<body class="min-h-screen">
-  <header class="sticky top-0 z-50 border-b" style="background:#fffdf7;border-color:#e0d4bc;">
-    <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2.5 font-semibold tracking-tight" style="color:#3d3429;">
-        <span class="w-7 h-7 rounded text-xs flex items-center justify-center font-bold" style="background:#5c4a32;color:#faf6eb;">TH</span>
-        TFE Hub
-      </a>
-      <nav class="flex items-center gap-1 sm:gap-2 text-sm flex-wrap justify-end">
-        <a href="#projets" class="px-2 py-1.5 rounded-md hover:bg-[#f3ead6]" style="color:#6b5e4f;">Projets</a>
-        <a href="/amis" class="px-2 py-1.5 rounded-md hover:bg-[#f3ead6]" style="color:#6b5e4f;">Amis</a>
-        <a href="/messages" class="px-2 py-1.5 rounded-md hover:bg-[#f3ead6]" style="color:#6b5e4f;">Messages</a>
-        <span class="px-1 text-xs hidden sm:inline" style="color:#8a7b68;">{{ current_user.username }}</span>
-        <a href="{{ url_for('logout') }}" class="px-2 py-1.5 rounded-md hover:bg-[#f3ead6]" style="color:#6b5e4f;">Déconnexion</a>
+<body>
+  <header class="nav">
+    <div class="wrap" style="display:flex;width:100%;align-items:center;justify-content:space-between;">
+      <a href="/" class="logo"><span class="logo-badge">TH</span> TFE Hub</a>
+      <nav class="nav-links">
+        <a href="/" class="active">Projets</a>
+        <a href="/amis">Amis</a>
+        <a href="/messages">Messages</a>
+        <span class="muted" style="padding:0 0.35rem;">{{ current_user.username }}</span>
+        <a href="/logout">Déconnexion</a>
       </nav>
     </div>
   </header>
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="max-w-6xl mx-auto px-4 pt-3 space-y-2">
+  <div class="wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
       {% for cat, msg in messages %}
-      <div class="text-sm px-4 py-2.5 rounded-lg border"
-        style="{% if cat=='error' %}background:#fef2f2;border-color:#fecaca;color:#991b1b;
-        {% elif cat=='success' %}background:#f0fdf4;border-color:#bbf7d0;color:#166534;
-        {% else %}background:#fffbeb;border-color:#fde68a;color:#92400e;{% endif %}">{{ msg }}</div>
+      <div class="flash flash-{{ cat if cat in ['error','success','warning'] else 'success' }}">{{ msg }}</div>
       {% endfor %}
-    </div>
-    {% endif %}
-  {% endwith %}
-  <section class="border-b" style="background:#fffdf7;border-color:#e0d4bc;">
-    <div class="max-w-6xl mx-auto px-4 py-10 sm:py-12">
-      <h1 class="text-2xl sm:text-3xl font-bold mb-2" style="color:#3d3429;">Projets de fin d’études</h1>
-      <p class="text-sm sm:text-base max-w-xl" style="color:#6b5e4f;">Dépose ton TFE, consulte ceux des autres, like et discute — réservé aux étudiants connectés.</p>
+    {% endwith %}
+  </div>
+  <section class="hero">
+    <div class="wrap">
+      <h1 style="font-size:1.6rem;">Projets de fin d’études</h1>
+      <p class="muted">Dépose ton TFE, like, discute — réservé aux étudiants connectés.</p>
     </div>
   </section>
-  <div class="max-w-6xl mx-auto px-4 py-8 grid lg:grid-cols-3 gap-8">
-    <div class="lg:col-span-2 space-y-8">
-      <section id="projets">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold" style="color:#3d3429;">Projets</h2>
-          <span class="text-xs" style="color:#8a7b68;">{{ projects|length }} résultat(s)</span>
+  <div class="wrap" style="padding-top:1.5rem;padding-bottom:2rem;">
+    <div class="grid grid-main">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+          <h2 style="font-size:1.1rem;">Projets</h2>
+          <span class="muted">{{ projects|length }}</span>
         </div>
-        <form method="GET" class="flex flex-col sm:flex-row gap-2 mb-6">
-          <input type="search" name="q" value="{{ q }}" placeholder="Rechercher…" class="input flex-1" />
-          <select name="domaine" class="input sm:w-40" onchange="this.form.submit()">
+        <form method="GET" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">
+          <input class="input" style="flex:1;min-width:140px;" type="search" name="q" value="{{ q }}" placeholder="Rechercher…" />
+          <select class="input" name="domaine" style="width:auto;" onchange="this.form.submit()">
             <option value="all" {% if domaine=='all' %}selected{% endif %}>Tous</option>
             <option value="informatique" {% if domaine=='informatique' %}selected{% endif %}>Informatique</option>
             <option value="data" {% if domaine=='data' %}selected{% endif %}>Data / IA</option>
@@ -64,80 +51,73 @@
             <option value="cyber" {% if domaine=='cyber' %}selected{% endif %}>Cybersécurité</option>
             <option value="autre" {% if domaine=='autre' %}selected{% endif %}>Autre</option>
           </select>
-          <button type="submit" class="btn-primary px-4">Filtrer</button>
+          <button class="btn" type="submit">Filtrer</button>
         </form>
-        <div id="projects-list" class="space-y-3">
+        <div id="projects-list">
           {% for p in projects %}
-          <article class="project-card rounded-lg p-4 sm:p-5 border transition" data-id="{{ p.id }}">
-            <div class="flex items-start justify-between gap-3 mb-2">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="badge">{{ p.domaine }}</span>
-                <span class="text-xs" style="color:#8a7b68;">{{ p.created_at.strftime('%d/%m/%Y') if p.created_at else '' }}</span>
-              </div>
-              <button onclick="likeProject({{ p.id }}, this)" class="like-btn text-sm flex items-center gap-1">
-                <span>♥</span> <span class="like-count">{{ p.likes or 0 }}</span>
-              </button>
+          <article class="card project" data-id="{{ p.id }}">
+            <div style="display:flex;justify-content:space-between;gap:0.5rem;margin-bottom:0.35rem;">
+              <span class="badge">{{ p.domaine }}</span>
+              <button class="btn-outline like-btn" onclick="likeProject({{ p.id }}, this)">♥ <span class="like-count">{{ p.likes or 0 }}</span></button>
             </div>
-            <h3 class="font-semibold mb-1" style="color:#3d3429;"><a href="/projet/{{ p.id }}" class="hover:underline">{{ p.titre }}</a></h3>
-            <p class="text-sm line-clamp-2 mb-3" style="color:#6b5e4f;">{{ p.description }}</p>
-            <div class="flex items-center justify-between text-xs" style="color:#8a7b68;">
+            <h3><a href="/projet/{{ p.id }}">{{ p.titre }}</a></h3>
+            <p class="muted line-clamp">{{ p.description }}</p>
+            <div style="display:flex;justify-content:space-between;margin-top:0.5rem;" class="muted">
               <span>{{ p.auteur }}{% if p.annee %} · {{ p.annee }}{% endif %}</span>
-              <a href="/projet/{{ p.id }}" class="font-medium hover:underline" style="color:#a68b3d;">Détails →</a>
+              <a href="/projet/{{ p.id }}">Détails →</a>
             </div>
           </article>
           {% else %}
-          <p class="text-center py-12 text-sm" style="color:#8a7b68;">Aucun projet trouvé.</p>
+          <p class="muted" style="text-align:center;padding:2rem;">Aucun projet.</p>
           {% endfor %}
         </div>
-      </section>
-      <section id="deposer" class="rounded-lg p-5 sm:p-6 border" style="background:#fffdf7;border-color:#e0d4bc;">
-        <h2 class="text-lg font-semibold mb-4" style="color:#3d3429;">Déposer un projet</h2>
-        <form id="project-form" class="space-y-3">
-          <div><label class="label">Titre *</label><input type="text" name="titre" required class="input" placeholder="Titre du TFE" /></div>
-          <div class="grid sm:grid-cols-2 gap-3">
-            <div><label class="label">Domaine *</label>
-              <select name="domaine" required class="input">
-                <option value="informatique">Informatique</option>
-                <option value="data">Data / IA</option>
-                <option value="web">Web / Mobile</option>
-                <option value="cyber">Cybersécurité</option>
-                <option value="autre">Autre</option>
-              </select>
+        <section class="card" style="margin-top:1.5rem;">
+          <h2 style="font-size:1.1rem;margin-bottom:0.75rem;">Déposer un projet</h2>
+          <form id="project-form" style="display:flex;flex-direction:column;gap:0.65rem;">
+            <div><label class="label">Titre *</label><input class="input" name="titre" required /></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+              <div><label class="label">Domaine *</label>
+                <select class="input" name="domaine" required>
+                  <option value="informatique">Informatique</option>
+                  <option value="data">Data / IA</option>
+                  <option value="web">Web</option>
+                  <option value="cyber">Cybersécurité</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </div>
+              <div><label class="label">Année</label><input class="input" name="annee" placeholder="2025-2026" /></div>
             </div>
-            <div><label class="label">Année</label><input type="text" name="annee" class="input" placeholder="2025-2026" /></div>
+            <div><label class="label">Description *</label><textarea class="input" name="description" rows="3" required></textarea></div>
+            <div><label class="label">Lien</label><input class="input" type="url" name="lien" placeholder="https://" /></div>
+            <button class="btn" type="submit">Publier</button>
+          </form>
+        </section>
+      </div>
+      <aside>
+        <div class="card chat-box">
+          <div style="padding:0.65rem 0.85rem;border-bottom:1px solid var(--border);background:var(--paper2);display:flex;justify-content:space-between;">
+            <strong style="font-size:0.875rem;">Chat général</strong>
+            <span class="muted" id="online-status">● Hors ligne</span>
           </div>
-          <div><label class="label">Description *</label><textarea name="description" required rows="3" class="input" placeholder="Objectifs, technologies…"></textarea></div>
-          <div><label class="label">Lien</label><input type="url" name="lien" class="input" placeholder="https://" /></div>
-          <button type="submit" class="btn-primary w-full py-2.5">Publier</button>
-        </form>
-      </section>
-    </div>
-    <aside id="chat">
-      <div class="rounded-lg border overflow-hidden sticky top-20 flex flex-col h-[560px]" style="background:#fffdf7;border-color:#e0d4bc;">
-        <div class="px-4 py-3 border-b flex items-center justify-between" style="background:#f3ead6;border-color:#e0d4bc;">
-          <span class="text-sm font-semibold" style="color:#3d3429;">Chat</span>
-          <span id="online-status" class="text-xs" style="color:#8a7b68;">● Hors ligne</span>
-        </div>
-        <div id="username-box" class="p-3 border-b" style="border-color:#e0d4bc;">
-          <div class="flex gap-2">
-            <input type="text" id="username-input" maxlength="30" value="{{ current_user.username if current_user else '' }}" placeholder="Pseudo chat" class="input flex-1 text-sm" />
-            <button id="join-btn" class="btn-primary px-3 text-sm shrink-0">OK</button>
+          <div id="username-box" style="padding:0.65rem;border-bottom:1px solid var(--border);display:flex;gap:0.4rem;">
+            <input class="input" id="username-input" value="{{ current_user.username }}" maxlength="30" />
+            <button class="btn" id="join-btn" type="button">OK</button>
           </div>
-        </div>
-        <div id="chat-messages" class="flex-1 overflow-y-auto p-3 space-y-2 text-sm" style="background:#faf6eb;">
-          <p class="text-center text-xs py-6" style="color:#8a7b68;">Entre un pseudo pour rejoindre</p>
-        </div>
-        <div id="typing-indicator" class="px-3 py-1 text-xs hidden" style="color:#8a7b68;"></div>
-        <div id="chat-input-box" class="p-2 border-t hidden" style="border-color:#e0d4bc;">
-          <form id="chat-form" class="flex gap-2">
-            <input type="text" id="message-input" maxlength="500" placeholder="Message…" class="input flex-1 text-sm" autocomplete="off" />
-            <button type="submit" class="btn-primary px-3 text-sm shrink-0">→</button>
+          <div class="chat-msgs" id="chat-messages">
+            <p class="muted" style="text-align:center;padding:1rem;">Clique OK pour rejoindre</p>
+          </div>
+          <div id="typing-indicator" class="muted" style="padding:0 0.75rem;font-size:0.7rem;display:none;"></div>
+          <form id="chat-form" style="display:none;padding:0.5rem;border-top:1px solid var(--border);gap:0.4rem;">
+            <div style="display:flex;gap:0.4rem;width:100%;">
+              <input class="input" id="message-input" placeholder="Message…" maxlength="500" autocomplete="off" />
+              <button class="btn" type="submit">→</button>
+            </div>
           </form>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </div>
   </div>
-  <footer class="border-t mt-8 py-6 text-center text-xs" style="border-color:#e0d4bc;color:#8a7b68;">TFE Hub · Amis · Messages privés · Appels · 2025/2026</footer>
+  <footer>TFE Hub · Comptes · Amis · Messages · Appels · 2025/2026</footer>
   <script src="/static/js/app.js"></script>
 </body>
 </html>
